@@ -10,6 +10,8 @@ import Term from '@/reference/guide/Term.vue'
 import AgreeFormExample from '@/reference/example/AgreeFormExample.vue'
 import ButtonExample from '@/reference/example/ButtonExample.vue'
 import CheckboxExample from '@/reference/example/CheckboxExample.vue'
+import FormExample from '@/reference/example/FormExample.vue'
+import SelectboxExample from '@/reference/example/SelectboxExample.vue'
 
 const routes = [
   {
@@ -24,6 +26,8 @@ const routes = [
       { path: 'example/agree', name: 'AgreeFormExample', component: AgreeFormExample },
       { path: 'example/button', name: 'ButtonExample', component: ButtonExample },
       { path: 'example/checkbox', name: 'CheckboxExample', component: CheckboxExample },
+      { path: 'example/form', name: 'FormExample', component: FormExample },
+      { path: 'example/selectbox', name: 'SelectboxExample', component: SelectboxExample },
     ],
   },
 ]

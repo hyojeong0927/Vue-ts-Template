@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import BaseButton from '../../components/common/Button.vue'
+import BaseButton from '../../components/Button.vue'
 
 function onClick() {
   alert('버튼 클릭!')

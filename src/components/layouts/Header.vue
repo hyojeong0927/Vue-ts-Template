@@ -27,6 +27,12 @@
           <RouterLink to="/example/checkbox" :class="{ active: isActive('/example/checkbox') }"
             >Checkbox</RouterLink
           >
+          <RouterLink to="/example/form" :class="{ active: isActive('/example/form') }"
+            >Form</RouterLink
+          >
+          <RouterLink to="/example/selectbox" :class="{ active: isActive('/example/selectbox') }"
+            >Selectbox</RouterLink
+          >
         </div>
       </div>
 
