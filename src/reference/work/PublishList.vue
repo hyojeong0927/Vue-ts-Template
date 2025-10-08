@@ -158,7 +158,7 @@ export default defineComponent({
   gap: 5px;
 }
 .filter-item label {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
 }
 .table {
   width: 100%;
@@ -168,15 +168,14 @@ th,
 td {
   padding: 6px 8px;
   border: 1px solid #ddd;
+  font-size: 0.8rem;
   font-weight: normal;
 }
 th {
-  font-size: 0.7rem;
+  color: #666;
   background-color: #ddd;
 }
-td {
-  font-size: 0.9rem;
-}
+
 .table ul {
   padding-left: 16px;
   margin: 0;

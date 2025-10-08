@@ -58,7 +58,7 @@ export default defineComponent({
 
 <style scoped>
 .dashboard {
-  padding: 16px;
+  padding: 5px 20px 10px;
 }
 .summary {
   display: flex;
@@ -90,10 +90,10 @@ export default defineComponent({
 }
 .label {
   margin: 4px 0;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
 }
 .value {
   margin: 4px 0;
-  font-size: 1.4rem;
+  font-size: 1rem;
 }
 </style>
