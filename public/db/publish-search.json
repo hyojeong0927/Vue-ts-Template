@@ -1,0 +1,36 @@
+{
+  "publish": [
+    {
+      "id": 6,
+      "depth1": "검색 페이지",
+      "depth2": "",
+      "depth3": "",
+      "type": "Vue",
+      "folder": "search",
+      "file": "search.vue",
+      "status": "진행중",
+      "startDate": "2025-10-05",
+      "endDate": "",
+      "devStartDate": "2025-10-07",
+      "modifiedDate": "",
+      "hasDesign": "",
+      "history": ""
+    },
+    {
+      "id": 7,
+      "depth1": "검색 페이지",
+      "depth2": "결과 페이지",
+      "depth3": "",
+      "type": "Vue",
+      "folder": "search",
+      "file": "result.vue",
+      "status": "대기",
+      "startDate": "2025-10-06",
+      "endDate": "",
+      "devStartDate": "2025-10-08",
+      "modifiedDate": "",
+      "hasDesign": "",
+      "history": ""
+    }
+  ]
+}

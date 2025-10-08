@@ -1,0 +1,20 @@
+{
+  "publish": [
+    {
+      "id": 5,
+      "depth1": "마이페이지",
+      "depth2": "",
+      "depth3": "",
+      "type": "Vue",
+      "folder": "mypage",
+      "file": "mypage.vue",
+      "status": "완료",
+      "startDate": "2025-10-04",
+      "endDate": "2025-10-06",
+      "devStartDate": "2025-10-10",
+      "modifiedDate": "",
+      "hasDesign": "예",
+      "history": ""
+    }
+  ]
+}

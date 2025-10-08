@@ -1,0 +1,52 @@
+{
+  "publish": [
+    {
+      "id": 2,
+      "depth1": "공통",
+      "depth2": "로그인 페이지",
+      "depth3": "",
+      "type": "Vue",
+      "folder": "auth",
+      "file": "login.vue",
+      "status": "진행중",
+      "startDate": "2025-10-02",
+      "endDate": "2025-10-05",
+      "devStartDate": "2025-10-05",
+      "modifiedDate": "",
+      "hasDesign": "",
+      "history": ""
+    },
+    {
+      "id": 3,
+      "depth1": "회원가입",
+      "depth2": "약관",
+      "depth3": "",
+      "type": "Vue",
+      "folder": "auth",
+      "file": "terms.vue",
+      "status": "대기",
+      "startDate": "2025-10-03",
+      "endDate": "",
+      "devStartDate": "2025-10-03",
+      "modifiedDate": "",
+      "hasDesign": "",
+      "history": ""
+    },
+    {
+      "id": 4,
+      "depth1": "회원가입",
+      "depth2": "Step1",
+      "depth3": "",
+      "type": "Vue",
+      "folder": "auth",
+      "file": "signup-step1.vue",
+      "status": "대기",
+      "startDate": "2025-10-03",
+      "endDate": "",
+      "devStartDate": "2025-10-04",
+      "modifiedDate": "",
+      "hasDesign": "",
+      "history": ""
+    }
+  ]
+}

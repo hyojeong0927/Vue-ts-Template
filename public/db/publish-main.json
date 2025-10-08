@@ -1,0 +1,24 @@
+{
+  "publish": [
+    {
+      "id": 1,
+      "depth1": "메인 페이지",
+      "depth2": "",
+      "depth3": "",
+      "type": "HTML",
+      "folder": "main",
+      "file": "index.html",
+      "status": "완료",
+      "startDate": "2025-10-01",
+      "endDate": "2025-10-02",
+      "devStartDate": "2025-10-03",
+      "modifiedDate": "2025-10-05",
+      "hasDesign": "예",
+      "history": [
+        "<b>2025-10-01</b>: 초기 개발 완료",
+        "<i>2025-10-03</i>: 스타일 수정",
+        "<span style='color:red'>2025-10-05</span>: 버그 수정"
+      ]
+    }
+  ]
+}
