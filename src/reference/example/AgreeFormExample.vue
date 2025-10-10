@@ -1,6 +1,6 @@
 <template>
   <form class="terms-form" @submit.prevent="handleSubmit">
-    <h2>약관 동의</h2>
+    <h3>약관 동의</h3>
 
     <div class="checkbox-group">
       <!-- 전체 선택 -->

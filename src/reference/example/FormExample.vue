@@ -1,6 +1,6 @@
 <template>
   <div class="input-demo">
-    <h3>업그레이드 입력폼 예시</h3>
+    <h3>입력폼 예시</h3>
     <form>
       <div class="form-row">
         <BaseInput

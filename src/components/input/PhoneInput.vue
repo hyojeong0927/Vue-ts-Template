@@ -1,35 +1,42 @@
 <template>
-  <div class="base-phone-input">
+  <div class="phone-input-group">
     <label v-if="label" class="phone-label">{{ label }}</label>
-    <div class="phone-inputs">
-      <input
-        type="text"
-        v-model="areaCode"
+    <div class="phone-fields">
+      <!-- 국번 선택 -->
+      <BaseSelect
+        v-model="phoneParts.first"
+        :options="prefixOptions"
         placeholder="국번"
-        @blur="validatePart(areaCode, 'areaCode')"
+        class="phone-select"
       />
-      <span class="divider">-</span>
-      <input
-        type="text"
-        v-model="firstPart"
+
+      <!-- 앞 번호 -->
+      <BaseInput
+        v-model="phoneParts.middle"
         placeholder="앞 번호"
-        @blur="validatePart(firstPart, 'firstPart')"
+        maxlength="4"
+        type="number"
+        class="phone-input"
+        @input="onInput"
       />
-      <span class="divider">-</span>
-      <input
-        type="text"
-        v-model="lastPart"
+
+      <!-- 마지막 번호 -->
+      <BaseInput
+        v-model="phoneParts.last"
         placeholder="마지막 번호"
-        @blur="validatePart(lastPart, 'lastPart')"
+        maxlength="4"
+        type="number"
+        class="phone-input"
+        @input="onInput"
       />
     </div>
-
-    <p v-if="error" class="error-msg">{{ error }}</p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
+import BaseSelect from '@/components/selectbox/Selectbox.vue'
+import BaseInput from '@/components/input/InputGroup.vue'
 
 interface Props {
   modelValue: string
@@ -39,64 +46,80 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits(['update:modelValue'])
 
-const areaCode = ref('')
-const firstPart = ref('')
-const lastPart = ref('')
-
-const error = ref<string | null>(null)
-
-watch([areaCode, firstPart, lastPart], () => {
-  emit('update:modelValue', `${areaCode.value}-${firstPart.value}-${lastPart.value}`)
+const phoneParts = ref({
+  first: '',
+  middle: '',
+  last: '',
 })
 
-function validatePart(value: string, part: string) {
-  const regex = /^[0-9]*$/
-  if (!regex.test(value)) {
-    error.value = '숫자만 입력 가능합니다.'
-    return false
-  }
-  if (value.length < 2) {
-    error.value = '각 번호는 최소 2자리 이상이어야 합니다.'
-    return false
-  }
-  error.value = null
-  return true
+// 국번 리스트
+const prefixOptions = [
+  { value: '010', label: '010' },
+  { value: '011', label: '011' },
+  { value: '016', label: '016' },
+  { value: '017', label: '017' },
+  { value: '018', label: '018' },
+  { value: '019', label: '019' },
+]
+
+// 전체 번호 조합
+const fullPhone = computed(() => {
+  const { first, middle, last } = phoneParts.value
+  return [first, middle, last].filter(Boolean).join('-')
+})
+
+// 부모로 값 전달
+watch(fullPhone, val => {
+  emit('update:modelValue', val)
+})
+
+// 초기값 분리
+watch(
+  () => props.modelValue,
+  val => {
+    if (val) {
+      const parts = val.split('-')
+      phoneParts.value = {
+        first: parts[0] || '',
+        middle: parts[1] || '',
+        last: parts[2] || '',
+      }
+    }
+  },
+  { immediate: true }
+)
+
+function onInput() {
+  // 숫자 외 제거
+  phoneParts.value.middle = phoneParts.value.middle.replace(/\D/g, '')
+  phoneParts.value.last = phoneParts.value.last.replace(/\D/g, '')
 }
 </script>
 
 <style scoped>
-.base-phone-input {
+.phone-input-group {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  width: 100%;
 }
 
 .phone-label {
+  font-size: 14px;
   font-weight: 500;
-  font-size: 14px;
 }
 
-.phone-inputs {
+.phone-fields {
   display: flex;
+  gap: 8px;
   align-items: center;
-  gap: 4px;
 }
 
-.phone-inputs input {
+.phone-select {
+  width: 90px;
+}
+
+.phone-input {
   flex: 1;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 14px;
-}
-
-.divider {
-  font-size: 16px;
-  padding: 0 4px;
-}
-
-.error-msg {
-  color: #e53935;
-  font-size: 12px;
 }
 </style>

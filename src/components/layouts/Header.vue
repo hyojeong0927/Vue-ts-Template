@@ -25,13 +25,27 @@
             >Button</RouterLink
           >
           <RouterLink to="/example/checkbox" :class="{ active: isActive('/example/checkbox') }"
-            >Checkbox</RouterLink
+            >Checkbox&Radio</RouterLink
+          >
+          <RouterLink to="/example/datepicker" :class="{ active: isActive('/example/datepicker') }"
+            >DatePicker</RouterLink
+          >
+          <RouterLink
+            to="/example/floatingbar"
+            :class="{ active: isActive('/example/floatingbar') }"
+            >FloatingBar</RouterLink
           >
           <RouterLink to="/example/form" :class="{ active: isActive('/example/form') }"
             >Form</RouterLink
           >
+          <RouterLink to="/example/modal" :class="{ active: isActive('/example/modal') }"
+            >Modal</RouterLink
+          >
           <RouterLink to="/example/selectbox" :class="{ active: isActive('/example/selectbox') }"
             >Selectbox</RouterLink
+          >
+          <RouterLink to="/example/tab" :class="{ active: isActive('/example/tab') }"
+            >Tab</RouterLink
           >
         </div>
       </div>
