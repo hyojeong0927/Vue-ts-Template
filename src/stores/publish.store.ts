@@ -1,4 +1,3 @@
-// stores/publish.store.ts
 import { defineStore } from 'pinia'
 import axios from 'axios'
 
