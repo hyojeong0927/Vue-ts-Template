@@ -13,36 +13,32 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, computed, watch } from 'vue'
 import CheckboxItem from './CheckboxItem.vue'
 
-interface Option {
-  label: string
-  disabled?: boolean
-}
+const props = defineProps({
+  modelValue: {
+    type: Array,
+    default: () => [],
+  },
+  options: {
+    type: Array,
+    default: () => [],
+  },
+})
 
-interface CheckboxItemType extends Option {
-  checked: boolean
-}
-
-interface Props {
-  modelValue: string[] // 선택된 항목
-  options: (string | Option)[] // ['A', { label: 'B', disabled: true }]
-}
-
-const props = defineProps<Props>()
 const emit = defineEmits(['update:modelValue'])
 
 // 내부 상태 구성
-const items = ref<CheckboxItemType[]>([])
+const items = ref([])
 
 function initItems() {
   items.value = props.options.map(opt => {
     const option = typeof opt === 'string' ? { label: opt } : opt
     return {
       label: option.label,
-      disabled: option.disabled ?? false,
+      disabled: option.disabled || false,
       checked: props.modelValue.includes(option.label),
     }
   })
@@ -59,9 +55,9 @@ const isAllChecked = computed(() =>
 )
 
 // 항목 업데이트
-function updateItem(index: number, val: boolean) {
+function updateItem(index, val) {
   const item = items.value[index]
-  if (item.disabled) return // 비활성화 항목은 무시
+  if (item.disabled) return
 
   item.checked = val
 
@@ -83,7 +79,7 @@ function updateItem(index: number, val: boolean) {
 }
 
 // 전체 선택 토글
-function toggleAll(val: boolean) {
+function toggleAll(val) {
   items.value.forEach(i => {
     if (i.label !== '전체 선택' && !i.disabled) {
       i.checked = val

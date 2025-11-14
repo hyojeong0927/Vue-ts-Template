@@ -3,7 +3,7 @@
     <!-- 탭 헤더 -->
     <div class="tabs-header" role="tablist">
       <button
-        v-for="tab in tabs"
+        v-for="tab in localTabs"
         :key="tab.value"
         class="tab-btn"
         :class="{ active: currentTab === tab.value, disabled: tab.disabled }"
@@ -30,13 +30,12 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, watch, onMounted, Slots, defineProps, defineEmits, PropType } from 'vue'
-import type { TabItem } from './tabs'
+<script setup>
+import { ref, watch, onMounted } from 'vue'
 
 const props = defineProps({
   tabs: {
-    type: Array as PropType<TabItem[]>,
+    type: Array,
     required: true,
   },
   modelValue: {
@@ -44,21 +43,16 @@ const props = defineProps({
     required: true,
   },
   variant: {
-    type: String as PropType<'line' | 'box' | 'pill'>,
+    type: String,
     default: 'line',
   },
   closable: Boolean,
 })
 
-const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void
-  (e: 'remove', tab: TabItem): void
-}>()
-
-const slots: Slots = defineSlots()
+const emit = defineEmits(['update:modelValue', 'remove'])
 
 const currentTab = ref('')
-const localTabs = ref<TabItem[]>(props.tabs || [])
+const localTabs = ref(props.tabs || [])
 
 watch(
   () => props.tabs,
@@ -72,11 +66,11 @@ watch(
   { immediate: true }
 )
 
-function selectTab(value: string) {
+function selectTab(value) {
   emit('update:modelValue', value)
 }
 
-function removeTab(tab: TabItem) {
+function removeTab(tab) {
   localTabs.value = localTabs.value.filter(t => t.value !== tab.value)
   emit('remove', tab)
 
@@ -99,10 +93,6 @@ onMounted(() => {
     emit('update:modelValue', currentTab.value)
   }
 })
-
-function getSlotComponent(name: string) {
-  return slots[name] ? { render: () => slots[name]!() } : { render: () => null }
-}
 </script>
 
 <style scoped>

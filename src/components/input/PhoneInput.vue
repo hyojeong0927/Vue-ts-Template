@@ -33,17 +33,16 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, watch, computed } from 'vue'
 import BaseSelect from '@/components/selectbox/Selectbox.vue'
 import BaseInput from '@/components/input/InputGroup.vue'
 
-interface Props {
-  modelValue: string
-  label?: string
-}
+const props = defineProps({
+  modelValue: String,
+  label: String,
+})
 
-const props = defineProps<Props>()
 const emit = defineEmits(['update:modelValue'])
 
 const phoneParts = ref({

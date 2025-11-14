@@ -7,7 +7,7 @@
         :placeholder="placeholder"
         :disabled="disabled"
         :value="modelValue"
-        @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+        @input="$emit('update:modelValue', $event.target.value)"
         @blur="validate"
       />
       <button v-if="buttonLabel" type="button" @click="$emit('button-click', modelValue)">
@@ -18,24 +18,26 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, watch } from 'vue'
 
-interface Props {
-  modelValue: string
-  label?: string
-  placeholder?: string
-  type?: string
-  disabled?: boolean
-  error?: string
-  validateFn?: (value: string) => string | null
-  buttonLabel?: string
-}
+const props = defineProps({
+  modelValue: String,
+  label: String,
+  placeholder: String,
+  type: {
+    type: String,
+    default: 'text',
+  },
+  disabled: Boolean,
+  error: String,
+  validateFn: Function,
+  buttonLabel: String,
+})
 
-const props = defineProps<Props>()
 const emit = defineEmits(['update:modelValue', 'button-click'])
 
-const error = ref<string | null>(null)
+const error = ref(null)
 
 watch(
   () => props.modelValue,

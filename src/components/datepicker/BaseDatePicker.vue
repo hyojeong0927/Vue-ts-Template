@@ -26,24 +26,20 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { defineProps, defineEmits } from 'vue'
+<script setup>
+const props = defineProps({
+  modelValue: [String, null],
+  label: String,
+  placeholder: String,
+  min: String,
+  max: String,
+  clearable: Boolean,
+})
 
-interface Props {
-  modelValue: string | null
-  label?: string
-  placeholder?: string
-  min?: string
-  max?: string
-  clearable?: boolean
-}
-
-const props = defineProps<Props>()
 const emit = defineEmits(['update:modelValue'])
 
-const onInput = (e: Event) => {
-  const target = e.target as HTMLInputElement
-  emit('update:modelValue', target.value)
+const onInput = e => {
+  emit('update:modelValue', e.target.value)
 }
 
 const clearDate = () => {

@@ -14,14 +14,8 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, watch } from 'vue'
-
-interface RadioOption {
-  label: string
-  value: string | number
-  disabled?: boolean
-}
 
 const props = defineProps({
   modelValue: {
@@ -29,7 +23,7 @@ const props = defineProps({
     required: true,
   },
   options: {
-    type: Array as () => RadioOption[],
+    type: Array,
     required: true,
   },
   disabled: {
@@ -49,7 +43,7 @@ watch(
   }
 )
 
-function selectOption(value: string | number) {
+function selectOption(value) {
   if (props.disabled) return
   internalValue.value = value
   emit('update:modelValue', value)

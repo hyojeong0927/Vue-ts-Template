@@ -10,15 +10,14 @@
   </label>
 </template>
 
-<script setup lang="ts">
-interface Props {
-  label: string
-  modelValue: boolean
-  disabled?: boolean
-}
+<script setup>
+const props = defineProps({
+  label: String,
+  modelValue: Boolean,
+  disabled: Boolean,
+})
 
-defineProps<Props>()
-defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue'])
 </script>
 
 <style scoped>

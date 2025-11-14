@@ -44,6 +44,9 @@
           <RouterLink to="/example/selectbox" :class="{ active: isActive('/example/selectbox') }"
             >Selectbox</RouterLink
           >
+          <RouterLink to="/example/step" :class="{ active: isActive('/example/step') }"
+            >Step</RouterLink
+          >
           <RouterLink to="/example/tab" :class="{ active: isActive('/example/tab') }"
             >Tab</RouterLink
           >

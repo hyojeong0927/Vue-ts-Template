@@ -6,9 +6,9 @@ const props = defineProps({
     type: String,
     default: 'right', // left | center | right
   },
-  gap: {
+  direction: {
     type: String,
-    default: '0.5rem', // 버튼 간격
+    default: 'row', // row | column
   },
 })
 
@@ -16,7 +16,7 @@ const alignClass = computed(() => `btn-area--${props.align}`)
 </script>
 
 <template>
-  <div class="btn-area" :class="alignClass" :style="{ gap: gap }">
+  <div class="btn-area" :class="[alignClass, `btn-area--${direction}`]">
     <slot />
   </div>
 </template>

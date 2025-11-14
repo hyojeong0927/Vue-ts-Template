@@ -15,6 +15,7 @@ import FloatingBarExample from '@/reference/example/FloatingBarExample.vue'
 import FormExample from '@/reference/example/FormExample.vue'
 import ModalExample from '@/reference/example/ModalExample.vue'
 import SelectboxExample from '@/reference/example/SelectboxExample.vue'
+import StepExample from '@/reference/example/StepExample.vue'
 import TabsExample from '@/reference/example/TabsExample.vue'
 
 const routes = [
@@ -35,6 +36,7 @@ const routes = [
       { path: 'example/form', name: 'FormExample', component: FormExample },
       { path: 'example/modal', name: 'ModalExample', component: ModalExample },
       { path: 'example/selectbox', name: 'SelectboxExample', component: SelectboxExample },
+      { path: 'example/step', name: 'StepExample', component: StepExample },
       { path: 'example/tab', name: 'TabsExample', component: TabsExample },
     ],
   },

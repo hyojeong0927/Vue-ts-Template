@@ -30,7 +30,6 @@
       </button>
     </div>
 
-    <!-- ✅ showQuickSelect 옵션으로 노출 제어 -->
     <div v-if="showQuickSelect" class="quick-select">
       <button type="button" class="quick-btn" @click="setPeriod(1)">1개월</button>
       <button type="button" class="quick-btn" @click="setPeriod(2)">2개월</button>
@@ -38,24 +37,21 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, watch, defineProps, defineEmits } from 'vue'
 
-interface DateRange {
-  start: string
-  end: string
-}
+const props = defineProps({
+  modelValue: {
+    type: Object,
+    default: () => ({ start: '', end: '' }),
+  },
+  label: String,
+  min: String,
+  max: String,
+  clearable: Boolean,
+  showQuickSelect: Boolean,
+})
 
-interface Props {
-  modelValue: DateRange
-  label?: string
-  min?: string
-  max?: string
-  clearable?: boolean
-  showQuickSelect?: boolean
-}
-
-const props = defineProps<Props>()
 const emit = defineEmits(['update:modelValue'])
 
 const localStart = ref(props.modelValue.start)
@@ -79,13 +75,13 @@ const clearRange = () => {
   localEnd.value = ''
 }
 
-const setPeriod = (months: number) => {
+const setPeriod = months => {
   const today = new Date()
   const startDate = new Date(today)
   const endDate = new Date(today)
   endDate.setMonth(today.getMonth() + months)
 
-  const format = (date: Date) => date.toISOString().split('T')[0]
+  const format = date => date.toISOString().split('T')[0]
 
   localStart.value = format(startDate)
   localEnd.value = format(endDate)

@@ -1,15 +1,13 @@
 /* Icons
 ========================================================================== */
-$icons: (
-  // header
-  h1-logo: (64px, 50px, 'svg')
-);
+$img-root: '/assets';
 
 // icon
 @mixin icon-base {
   display: inline-block;
   padding: 0;
-  background-size: 100%;
+  width: 1em;
+  height: 1em;
   background-position: center;
   background-repeat: no-repeat;
   box-sizing: content-box;
@@ -20,30 +18,12 @@ $icons: (
 }
 
 // icon 경로
-@function icon-path($name, $ext) {
-  @return '#{$img-root}/images/#{$ext}/#{$name}.#{$ext}';
-}
-
-@mixin icons($name) {
+@mixin icon($name, $bg-width: null, $bg-height: null) {
   @include icon-base;
+  background-image: url(icon-path($name));
 
-  @if map-has-key($icons, $name) {
-    $props: map-get($icons, $name);
+  $w: if($bg-width == null, 100%, $bg-width);
+  $h: if($bg-height == null, 100%, $bg-height);
 
-    $width: nth($props, 1);
-    $height: nth($props, 2);
-    $ext: nth($props, 3);
-
-    width: rem($width);
-    height: rem($height);
-    background-image: url(icon-path($name, $ext));
-  } @else {
-    @error "icons() mixin: '#{$name}' 아이콘이 $icons에 없습니다.";
-  }
-}
-
-@each $name, $props in $icons {
-  .icon.#{$name} {
-    @include icons($name);
-  }
+  background-size: $w $h;
 }
