@@ -11,6 +11,7 @@ import AgreeFormExample from '@/reference/example/AgreeFormExample.vue'
 import ButtonExample from '@/reference/example/ButtonExample.vue'
 import CheckboxExample from '@/reference/example/CheckboxExample.vue'
 import DatePickerExample from '@/reference/example/DatePickerExample.vue'
+import EtcExample from '@/reference/example/EtcExample.vue'
 import FloatingBarExample from '@/reference/example/FloatingBarExample.vue'
 import FormExample from '@/reference/example/FormExample.vue'
 import ModalExample from '@/reference/example/ModalExample.vue'
@@ -32,6 +33,7 @@ const routes = [
       { path: 'example/button', name: 'ButtonExample', component: ButtonExample },
       { path: 'example/checkbox', name: 'CheckboxExample', component: CheckboxExample },
       { path: 'example/datepicker', name: 'DatePickerExample', component: DatePickerExample },
+      { path: 'example/etc', name: 'EtcExample', component: EtcExample },
       { path: 'example/floatingbar', name: 'FloatingBarExample', component: FloatingBarExample },
       { path: 'example/form', name: 'FormExample', component: FormExample },
       { path: 'example/modal', name: 'ModalExample', component: ModalExample },

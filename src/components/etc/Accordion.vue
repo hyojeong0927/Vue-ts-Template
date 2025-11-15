@@ -4,7 +4,6 @@ import { ref, defineProps, nextTick } from 'vue'
 const props = defineProps({
   items: {
     type: Array,
-    required: true,
     default: () => [],
   },
   allowMultiple: {
@@ -16,15 +15,18 @@ const props = defineProps({
 const activeIndexes = ref([])
 
 const toggle = async index => {
+  const isActive = activeIndexes.value.includes(index)
+
   if (props.allowMultiple) {
-    if (activeIndexes.value.includes(index)) {
-      activeIndexes.value = activeIndexes.value.filter(i => i !== index)
-    } else {
-      activeIndexes.value.push(index)
-    }
+    activeIndexes.value = isActive
+      ? activeIndexes.value.filter(i => i !== index)
+      : [...activeIndexes.value, index]
   } else {
-    activeIndexes.value = activeIndexes.value[0] === index ? [] : [index]
+    activeIndexes.value = isActive ? [] : [index]
   }
+
+  // transition height 적용을 위해 업데이트 후 tick 기다림
+  await nextTick()
 }
 </script>
 
@@ -38,24 +40,51 @@ const toggle = async index => {
         </span>
       </button>
 
-      <transition
-        name="accordion-slide"
-        enter-active-class="accordion-slide-enter-active"
-        leave-active-class="accordion-slide-leave-active"
-      >
-        <div v-if="activeIndexes.includes(index)" class="accordion__content">
-          {{ item.content }}
+      <transition @enter="enter" @leave="leave">
+        <div v-show="activeIndexes.includes(index)" class="accordion__content" ref="contentEls">
+          <div class="accordion__inner">
+            {{ item.content }}
+          </div>
         </div>
       </transition>
     </div>
   </div>
 </template>
-<!-- <Accordion :items="accordionItems" :allowMultiple="true" />
-const accordionItems = [
-  { title: '아코디언 1', content: '내용 1입니다.' },
-  { title: '아코디언 2', content: '내용 2입니다.' },
-  { title: '아코디언 3', content: '내용 3입니다.' },
-] -->
+
+<script>
+// Transition methods (script setup 외부에 넣어야 함)
+const enter = el => {
+  el.style.height = '0px'
+  el.style.overflow = 'hidden'
+
+  const height = el.scrollHeight
+
+  requestAnimationFrame(() => {
+    el.style.height = height + 'px'
+  })
+
+  el.addEventListener(
+    'transitionend',
+    () => {
+      el.style.height = 'auto'
+      el.style.overflow = 'hidden'
+    },
+    { once: true }
+  )
+}
+
+const leave = el => {
+  const height = el.scrollHeight
+
+  el.style.height = height + 'px'
+  el.style.overflow = 'hidden'
+
+  requestAnimationFrame(() => {
+    el.style.height = '0px'
+  })
+}
+</script>
+
 <style scoped>
 .accordion {
   border: 1px solid #ddd;
@@ -76,28 +105,11 @@ const accordionItems = [
   cursor: pointer;
 }
 .accordion__content {
+  overflow: hidden;
+  transition: height 0.3s ease;
+}
+.accordion__inner {
   padding: 12px 16px;
   background: #fff;
-  overflow: hidden;
-}
-
-/* 슬라이드 애니메이션 */
-.accordion-slide-enter-active,
-.accordion-slide-leave-active {
-  transition:
-    max-height 0.3s ease,
-    padding 0.3s ease;
-}
-.accordion-slide-enter-from,
-.accordion-slide-leave-to {
-  max-height: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-}
-.accordion-slide-enter-to,
-.accordion-slide-leave-from {
-  max-height: 500px; /* 최대 높이 조정 가능 */
-  padding-top: 12px;
-  padding-bottom: 12px;
 }
 </style>

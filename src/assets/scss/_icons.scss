@@ -2,6 +2,10 @@
 ========================================================================== */
 $img-root: '/assets';
 
+// icon 경로
+@function icon-path($name, $ext) {
+  @return '#{$img-root}/images/#{$ext}/#{$name}.svg';
+}
 // icon
 @mixin icon-base {
   display: inline-block;

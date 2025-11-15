@@ -8,49 +8,45 @@ const props = defineProps({
   },
   variant: {
     type: String,
-    default: 'default', // 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'outline'
+    default: 'default',
   },
   color: {
     type: String,
-    default: '', // outline일 때 커스텀 색 지정 가능 (선택사항)
+    default: '',
   },
   size: {
     type: String,
-    default: 'md', // 'sm' | 'md' | 'lg'
+    default: 'md',
   },
   dot: {
     type: Boolean,
-    default: false, // true면 점만 표시
+    default: false,
   },
   outline: {
     type: Boolean,
-    default: false, // true면 outline 스타일로 강제 적용
+    default: false,
   },
 })
 
-const classes = computed(() => [
-  'badge',
-  `badge--${props.size}`,
-  props.outline ? `badge--outline-${props.variant}` : `badge--${props.variant}`,
-  { 'badge--dot': props.dot },
-])
-const styleVars = computed(() => ({
-  '--badge-color': props.color || 'inherit',
+const badgeClass = computed(() => ({
+  badge: true,
+  [`badge--${props.size}`]: true,
+  [`badge--${props.variant}`]: !props.outline,
+  [`badge--outline`]: props.outline,
+  'badge--dot': props.dot,
 }))
 </script>
 
 <template>
-  <span :class="classes" :style="styleVars">
-    <slot>
-      <template v-if="!dot">{{ label }}</template>
-    </slot>
+  <span :class="badgeClass">
+    <template v-if="!dot">
+      <slot>{{ label }}</slot>
+    </template>
   </span>
 </template>
-<!-- <Badge label="기본" /> -->
-<!-- <Badge label="Primary" variant="primary" /> -->
-<!-- <Badge :label="5" variant="primary" /> -->
-<!-- <Badge label="Outline" variant="primary" outline /> -->
+
 <style scoped lang="scss">
+// @use '@/styles/mixins.scss' as *;
 .badge {
   display: inline-flex;
   align-items: center;
@@ -61,6 +57,8 @@ const styleVars = computed(() => ({
   line-height: 1;
   transition: all 0.2s ease;
   border: 1px solid transparent;
+  background: var(--badge-bg, initial);
+  color: var(--badge-color, inherit);
 
   &--sm {
     font-size: 0.75rem;
@@ -77,75 +75,42 @@ const styleVars = computed(() => ({
     padding: 0.35rem 0.75rem;
   }
 
-  /* ─── 기본 variant ─────────────────────────────────────────── */
+  /* preset variants */
   &--default {
     background: #e9ecef;
     color: #333;
   }
-
   &--primary {
     background: #007bff;
     color: #fff;
   }
-
   &--success {
     background: #28a745;
     color: #fff;
   }
-
   &--warning {
     background: #ffc107;
     color: #212529;
   }
-
   &--danger {
     background: #dc3545;
     color: #fff;
   }
 
-  /* ─── outline variant ───────────────────────────────────────── */
-  &--outline-default {
-    background: transparent;
-    color: #333;
-    border-color: #ccc;
+  /* outline 공통 처리 */
+  &--outline {
+    background: transparent !important;
+    border-color: var(--badge-color, currentColor);
+    color: var(--badge-color, currentColor);
   }
 
-  &--outline-primary {
-    background: transparent;
-    color: #007bff;
-    border-color: #007bff;
-  }
-
-  &--outline-success {
-    background: transparent;
-    color: #28a745;
-    border-color: #28a745;
-  }
-
-  &--outline-warning {
-    background: transparent;
-    color: #ffc107;
-    border-color: #ffc107;
-  }
-
-  &--outline-danger {
-    background: transparent;
-    color: #dc3545;
-    border-color: #dc3545;
-  }
-
-  /* ─── 커스텀 색상 지원 ─────────────────────────────────────── */
-  &[style*='--badge-color'] {
-    color: var(--badge-color);
-    border-color: var(--badge-color);
-  }
-
-  /* ─── 점 형태 ───────────────────────────────────────────────── */
+  /* dot 형태 */
   &--dot {
     width: 10px;
     height: 10px;
     padding: 0;
     border-radius: 50%;
+    border-width: 2px;
   }
 }
 </style>

@@ -30,6 +30,9 @@
           <RouterLink to="/example/datepicker" :class="{ active: isActive('/example/datepicker') }"
             >DatePicker</RouterLink
           >
+          <RouterLink to="/example/etc" :class="{ active: isActive('/example/etc') }"
+            >etc</RouterLink
+          >
           <RouterLink
             to="/example/floatingbar"
             :class="{ active: isActive('/example/floatingbar') }"
