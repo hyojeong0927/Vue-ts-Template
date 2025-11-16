@@ -9,7 +9,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref } from 'vue'
 
 const props = defineProps({
@@ -23,8 +23,8 @@ const props = defineProps({
   },
   position: {
     type: String,
-    default: 'bottom-right', // 위치 옵션 기본값
-    validator: (value: string) => {
+    default: 'bottom-right',
+    validator(value) {
       return ['bottom-right', 'bottom-left', 'top-right', 'top-left'].includes(value)
     },
   },

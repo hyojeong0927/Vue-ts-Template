@@ -30,12 +30,12 @@
   </section>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref } from 'vue'
 import BaseTabs from '@/components/tabs/BaseTabs.vue'
-import type { TabItem } from '@/components/tabs/tabs'
 
-const tabs: TabItem[] = [
+// --- TypeScript 제거: TabItem 타입 제거
+const tabs = [
   { label: '홈', value: 'home' },
   { label: '프로필', value: 'profile' },
   { label: '설정', value: 'settings' },
@@ -47,7 +47,7 @@ const active1 = ref('home')
 const active2 = ref('home')
 const active3 = ref('home')
 
-function onTabRemove(tab: TabItem) {
+function onTabRemove(tab) {
   console.log('탭 삭제됨:', tab)
 }
 </script>

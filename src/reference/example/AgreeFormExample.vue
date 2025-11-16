@@ -50,19 +50,11 @@
   </form>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { reactive, computed } from 'vue'
 import CheckboxItem from '../../components/checkbox/CheckboxItem.vue'
 
-interface Term {
-  label: string
-  content?: string
-  required?: boolean
-  disabled?: boolean
-  checked: boolean
-  open: boolean
-}
-
+// --- TypeScript interface 제거하고 일반 객체 사용 ---
 const terms = reactive({
   all: { label: '전체 선택', checked: false, open: false },
   items: [
@@ -100,7 +92,6 @@ const terms = reactive({
 
 // 전체 선택 여부
 const hasAllOption = computed(() => true)
-
 const termList = computed(() => terms.items)
 
 const isAllChecked = computed(() => terms.items.filter(t => !t.disabled).every(t => t.checked))
@@ -109,8 +100,9 @@ const requiredTerms = computed(() => terms.items.filter(t => t.required && !t.di
 
 const isAllRequiredChecked = computed(() => requiredTerms.value.every(t => t.checked))
 
+// ----------------------------------------------------------------------
 // 전체 선택 토글
-function toggleAll(val: boolean) {
+function toggleAll(val) {
   terms.all.checked = val
   terms.items.forEach(t => {
     if (!t.disabled) t.checked = val
@@ -118,9 +110,10 @@ function toggleAll(val: boolean) {
 }
 
 // 개별 체크 토글
-function updateItem(index: number, val: boolean) {
+function updateItem(index, val) {
   const term = terms.items[index]
   if (term.disabled) return
+
   term.checked = val
 
   if (hasAllOption.value) {
@@ -129,7 +122,7 @@ function updateItem(index: number, val: boolean) {
 }
 
 // 아코디언 토글
-function toggleAccordion(index: number) {
+function toggleAccordion(index) {
   terms.items[index].open = !terms.items[index].open
 }
 

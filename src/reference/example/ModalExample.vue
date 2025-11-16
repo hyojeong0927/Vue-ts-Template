@@ -16,6 +16,7 @@
         <button class="btn" style="background: #28a745">확인</button>
       </template>
     </BaseModal>
+
     <BaseModal
       :visible="openModalLarge"
       title="회원 정보 확인"
@@ -24,10 +25,11 @@
     >
       <p>이 팝업은 재사용 가능한 컴포넌트입니다.</p>
       <template #footer>
-        <button class="btn" @click="openModal = false">닫기</button>
+        <button class="btn" @click="openModalLarge = false">닫기</button>
         <button class="btn" style="background: #28a745">확인</button>
       </template>
     </BaseModal>
+
     <!-- Alert -->
     <BaseModal
       :visible="showAlert"
@@ -50,7 +52,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref } from 'vue'
 import BaseModal from '@/components/modal/BaseModal.vue'
 import BaseButton from '@/components/Button.vue'
@@ -65,6 +67,7 @@ function onConfirm() {
   showConfirm.value = false
 }
 </script>
+
 <style scoped>
 .button-group {
   display: flex;

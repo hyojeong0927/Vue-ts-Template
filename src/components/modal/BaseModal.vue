@@ -36,15 +36,15 @@
   </transition>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { computed } from 'vue'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
   title: { type: String, default: '' },
   message: { type: String, default: '' },
-  size: { type: String as () => 'small' | 'medium' | 'large', default: 'medium' },
-  type: { type: String as () => 'default' | 'alert' | 'confirm', default: 'default' },
+  size: { type: String, default: 'medium' }, // small, medium, large
+  type: { type: String, default: 'default' }, // default, alert, confirm
 })
 
 const emit = defineEmits(['close', 'confirm'])

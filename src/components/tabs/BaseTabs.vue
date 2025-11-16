@@ -54,32 +54,37 @@ const emit = defineEmits(['update:modelValue', 'remove'])
 const currentTab = ref('')
 const localTabs = ref(props.tabs || [])
 
+// props.tabs 변경 감지
 watch(
   () => props.tabs,
   newTabs => {
     localTabs.value = newTabs || []
     if (newTabs && newTabs.length > 0 && !currentTab.value) {
-      currentTab.value = props.modelValue ?? newTabs[0].value
+      currentTab.value = props.modelValue !== undefined ? props.modelValue : newTabs[0].value
       emit('update:modelValue', currentTab.value)
     }
   },
   { immediate: true }
 )
 
+// 탭 선택
 function selectTab(value) {
+  currentTab.value = value
   emit('update:modelValue', value)
 }
 
+// 탭 제거
 function removeTab(tab) {
   localTabs.value = localTabs.value.filter(t => t.value !== tab.value)
   emit('remove', tab)
 
   if (currentTab.value === tab.value) {
-    currentTab.value = localTabs.value[0]?.value || ''
+    currentTab.value = localTabs.value[0] ? localTabs.value[0].value : ''
     emit('update:modelValue', currentTab.value)
   }
 }
 
+// props.modelValue 변경 감지
 watch(
   () => props.modelValue,
   val => {
@@ -87,6 +92,7 @@ watch(
   }
 )
 
+// 마운트 시 초기값 설정
 onMounted(() => {
   if (!currentTab.value && localTabs.value.length > 0) {
     currentTab.value = localTabs.value[0].value

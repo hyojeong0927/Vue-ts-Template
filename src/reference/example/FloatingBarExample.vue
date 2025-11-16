@@ -5,7 +5,7 @@
   </FloatingBar>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref } from 'vue'
 import FloatingBar from '@/components/FloatingBar.vue'
 

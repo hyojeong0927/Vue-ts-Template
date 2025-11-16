@@ -46,7 +46,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref } from 'vue'
 import BaseInput from '@/components/input/InputGroup.vue'
 import PhoneInput from '@/components/input/PhoneInput.vue'
@@ -58,20 +58,20 @@ const password = ref('')
 const selectedOption = ref('')
 const phone = ref('')
 
-function validateName(value: string) {
+function validateName(value) {
   return value.length < 2 ? '이름은 최소 2자 이상이어야 합니다.' : null
 }
 
-function validateEmail(value: string) {
+function validateEmail(value) {
   const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return !regex.test(value) ? '유효한 이메일 주소를 입력하세요.' : null
 }
 
-function validatePassword(value: string) {
+function validatePassword(value) {
   return value.length < 6 ? '비밀번호는 최소 6자 이상이어야 합니다.' : null
 }
 
-function onEmailCheck(value: string) {
+function onEmailCheck(value) {
   alert(`이메일 검증 요청: ${value}`)
 }
 const countryOptions = [

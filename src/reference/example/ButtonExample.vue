@@ -12,7 +12,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import BaseButton from '../../components/Button.vue'
 
 function onClick() {
