@@ -102,10 +102,14 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.page-wrapper {
+  height: 100vh;
+}
 .tabs-container {
   width: 100%;
   display: flex;
   flex-direction: column;
+  height: 100%;
 }
 
 .tabs-header {
@@ -113,7 +117,11 @@ onMounted(() => {
   gap: 4px;
   border-bottom: 1px solid #ddd;
 }
-
+.tabs-body {
+  padding: 16px 0;
+  overflow-y: auto;
+  flex: 1; /* 남는 영역 모두 차지 → 스크롤 영역이 됨 */
+}
 .tab-btn {
   position: relative;
   padding: 8px 16px;
