@@ -46,6 +46,29 @@
       { term: 'CSS', desc: 'Style language' },
     ]"
   />
+  <BoxList
+    :boxes="[
+      {
+        title: 'Basic',
+        price: '10,000원',
+        variable: 'primary',
+        badges: [
+          { variable: 'outline', label: '기본' },
+          { variable: 'solid', label: '할인' },
+        ],
+      },
+      {
+        title: 'Premium',
+        price: '20,000원',
+        variable: 'danger',
+        badges: [
+          { variable: 'outline', label: '추천' },
+          { variable: 'solid', label: '인기' },
+          { variable: 'outline', label: '혜택' },
+        ],
+      },
+    ]"
+  />
 </template>
 
 <script setup>
@@ -54,6 +77,7 @@ import Badge from '@/components/etc/Badge.vue'
 import BtnArea from '@/components/etc/BtnArea.vue'
 import List from '@/components/etc/List.vue'
 import Title from '@/components/etc/Title.vue'
+import BoxList from '@/components/etc/Box.vue'
 
 const accordionItems = [
   { title: '제목1', content: '내용1내용내용내용내용내용내용' },

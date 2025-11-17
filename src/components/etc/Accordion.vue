@@ -14,6 +14,9 @@ const props = defineProps({
 
 const activeIndexes = ref([])
 
+/* -------------------------------
+   아코디언 토글
+-------------------------------- */
 const toggle = async index => {
   const isActive = activeIndexes.value.includes(index)
 
@@ -25,34 +28,12 @@ const toggle = async index => {
     activeIndexes.value = isActive ? [] : [index]
   }
 
-  // transition height 적용을 위해 업데이트 후 tick 기다림
   await nextTick()
 }
-</script>
 
-<template>
-  <div class="accordion">
-    <div v-for="(item, index) in items" :key="index" class="accordion__item">
-      <button class="accordion__header" @click="toggle(index)">
-        {{ item.title }}
-        <span class="accordion__icon">
-          {{ activeIndexes.includes(index) ? '−' : '+' }}
-        </span>
-      </button>
-
-      <transition @enter="enter" @leave="leave">
-        <div v-show="activeIndexes.includes(index)" class="accordion__content" ref="contentEls">
-          <div class="accordion__inner">
-            {{ item.content }}
-          </div>
-        </div>
-      </transition>
-    </div>
-  </div>
-</template>
-
-<script>
-// Transition methods (script setup 외부에 넣어야 함)
+/* -------------------------------
+   Transition Hooks
+-------------------------------- */
 const enter = el => {
   el.style.height = '0px'
   el.style.overflow = 'hidden'
@@ -85,15 +66,38 @@ const leave = el => {
 }
 </script>
 
+<template>
+  <div class="accordion">
+    <div v-for="(item, index) in items" :key="index" class="accordion__item">
+      <button class="accordion__header" @click="toggle(index)">
+        {{ item.title }}
+        <span class="accordion__icon">
+          {{ activeIndexes.includes(index) ? '−' : '+' }}
+        </span>
+      </button>
+
+      <transition @enter="enter" @leave="leave">
+        <div v-show="activeIndexes.includes(index)" class="accordion__content">
+          <div class="accordion__inner">
+            {{ item.content }}
+          </div>
+        </div>
+      </transition>
+    </div>
+  </div>
+</template>
+
 <style scoped>
 .accordion {
   border: 1px solid #ddd;
   border-radius: 8px;
   overflow: hidden;
 }
+
 .accordion__item + .accordion__item {
   border-top: 1px solid #ddd;
 }
+
 .accordion__header {
   width: 100%;
   padding: 12px 16px;
@@ -104,10 +108,12 @@ const leave = el => {
   align-items: center;
   cursor: pointer;
 }
+
 .accordion__content {
   overflow: hidden;
   transition: height 0.3s ease;
 }
+
 .accordion__inner {
   padding: 12px 16px;
   background: #fff;
