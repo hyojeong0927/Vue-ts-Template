@@ -20,6 +20,9 @@
 
       <!-- 기본 구성 -->
       <template v-else>
+        <div class="step-number" v-if="showNumber">
+          {{ index + 1 }}
+        </div>
         <div class="step-icon" v-if="step.icon">
           <i :class="`icon-${step.icon}`"></i>
         </div>
@@ -37,6 +40,10 @@
 import { computed, defineProps } from 'vue'
 
 const props = defineProps({
+  showNumber: {
+    type: Boolean,
+    default: false,
+  },
   steps: {
     type: Array,
     required: true,

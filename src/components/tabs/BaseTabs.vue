@@ -31,7 +31,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 
 const props = defineProps({
   tabs: {
@@ -40,7 +40,7 @@ const props = defineProps({
   },
   modelValue: {
     type: String,
-    required: true,
+    default: '',
   },
   variant: {
     type: String,
@@ -51,65 +51,65 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'remove'])
 
-const currentTab = ref('')
-const localTabs = ref(props.tabs || [])
+const localTabs = ref([...props.tabs])
+const currentTab = ref(props.modelValue || props.tabs?.[0]?.value || '')
 
-// props.tabs 변경 감지
+/* modelValue 변경 → 내부 currentTab 반영 */
+watch(
+  () => props.modelValue,
+  val => {
+    if (val !== currentTab.value) currentTab.value = val
+  }
+)
+
+/* tabs 변경 → localTabs 새로 세팅 */
 watch(
   () => props.tabs,
-  newTabs => {
-    localTabs.value = newTabs || []
-    if (newTabs && newTabs.length > 0 && !currentTab.value) {
-      currentTab.value = props.modelValue !== undefined ? props.modelValue : newTabs[0].value
+  newVal => {
+    localTabs.value = [...newVal]
+    if (!localTabs.value.find(t => t.value === currentTab.value)) {
+      // 존재하지 않는 탭이면 첫 번째로 이동
+      currentTab.value = localTabs.value[0]?.value || ''
       emit('update:modelValue', currentTab.value)
     }
   },
-  { immediate: true }
+  { deep: true }
 )
 
-// 탭 선택
+/* 현재 탭 선택 */
 function selectTab(value) {
+  if (value === currentTab.value) return
   currentTab.value = value
   emit('update:modelValue', value)
 }
 
-// 탭 제거
+/* 탭 제거 */
 function removeTab(tab) {
   localTabs.value = localTabs.value.filter(t => t.value !== tab.value)
   emit('remove', tab)
 
+  // 현재 탭이 삭제된 경우 → 첫 번째 탭 선택
   if (currentTab.value === tab.value) {
-    currentTab.value = localTabs.value[0] ? localTabs.value[0].value : ''
+    currentTab.value = localTabs.value[0]?.value || ''
     emit('update:modelValue', currentTab.value)
   }
 }
 
-// props.modelValue 변경 감지
-watch(
-  () => props.modelValue,
-  val => {
-    if (val !== undefined) currentTab.value = val
-  }
-)
+function setRealVH() {
+  const vh = window.innerHeight * 0.01
+  document.documentElement.style.setProperty('--real-vh', `${vh}px`)
+}
 
-// 마운트 시 초기값 설정
-onMounted(() => {
-  if (!currentTab.value && localTabs.value.length > 0) {
-    currentTab.value = localTabs.value[0].value
-    emit('update:modelValue', currentTab.value)
-  }
-})
+setRealVH()
+window.addEventListener('resize', setRealVH)
 </script>
 
 <style scoped>
-.page-wrapper {
-  height: 100vh;
-}
 .tabs-container {
+  height: calc(var(--real-vh, 1vh) * 100);
   width: 100%;
   display: flex;
   flex-direction: column;
-  height: 100%;
 }
 
 .tabs-header {
@@ -118,7 +118,10 @@ onMounted(() => {
   border-bottom: 1px solid #ddd;
 }
 .tabs-body {
-  padding: 16px 0;
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;
+
+  padding-bottom: 80px;
   overflow-y: auto;
   flex: 1; /* 남는 영역 모두 차지 → 스크롤 영역이 됨 */
 }

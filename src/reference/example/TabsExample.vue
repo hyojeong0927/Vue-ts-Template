@@ -2,11 +2,13 @@
   <section>
     <h3>라인형 탭</h3>
     <BaseTabs v-model="active1" :tabs="tabs" variant="line">
-      <template #home>홈 콘텐츠</template>
+      <template #home>
+        <div style="height: 7000px">홈</div>
+      </template>
       <template #profile>프로필 콘텐츠</template>
       <template #settings>설정 콘텐츠</template>
     </BaseTabs>
-
+    <!--
     <h3>박스형 탭</h3>
     <BaseTabs v-model="active2" :tabs="tabs" variant="box">
       <template #home>홈 콘텐츠</template>
@@ -26,7 +28,7 @@
       <template #home>홈 콘텐츠</template>
       <template #profile>프로필 콘텐츠</template>
       <template #settings>설정 콘텐츠</template>
-    </BaseTabs>
+    </BaseTabs> -->
   </section>
 </template>
 

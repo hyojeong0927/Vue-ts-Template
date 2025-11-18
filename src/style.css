@@ -11,6 +11,7 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --vh: 1vh; /* fallback */
 }
 
 a {
@@ -23,6 +24,7 @@ a:hover {
 }
 
 body {
+  overflow: hidden;
   margin: 0;
   display: flex;
   min-width: 320px;
@@ -56,7 +58,9 @@ button:focus-visible {
 .card {
   padding: 2em;
 }
-
+.main-content {
+  height: calc(var(--vh) * 100);
+}
 #app {
   max-width: 100%;
   width: 100%;
