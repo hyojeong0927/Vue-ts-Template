@@ -69,6 +69,7 @@
       },
     ]"
   />
+  <ProgressBar :percent="50" />
 </template>
 
 <script setup>
@@ -78,6 +79,7 @@ import BtnArea from '@/components/etc/BtnArea.vue'
 import List from '@/components/etc/List.vue'
 import Title from '@/components/etc/Title.vue'
 import BoxList from '@/components/etc/Box.vue'
+import ProgressBar from '@/components/etc/ProgressBar.vue'
 
 const accordionItems = [
   { title: '제목1', content: '내용1내용내용내용내용내용내용' },

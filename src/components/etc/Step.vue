@@ -6,7 +6,7 @@
         :is="getLinkComponent(step, index)"
         :to="useRouterLink(step, index) ? step.to : null"
         :href="getHref(step, index)"
-        class="step-item"
+        :class="['step-item', { active: index === current - 1, done: index < current - 1 }]"
         :target="shouldOpenNewTab(step, index) ? '_blank' : null"
         :rel="shouldOpenNewTab(step, index) ? 'noopener noreferrer' : null"
         @click="handleClick(step, index)"
