@@ -17,13 +17,6 @@
           @click="selectTab(tab.value)"
         >
           {{ tab.label }}
-          <span
-            v-if="closable && !tab.disabled"
-            class="close-btn"
-            @click.stop="removeTab(tab)"
-            title="닫기"
-            >✕</span
-          >
         </button>
       </div>
     </div>
@@ -42,7 +35,6 @@ const props = defineProps({
   tabs: { type: Array, required: true },
   modelValue: { type: String, default: '' },
   variant: { type: String, default: 'line' },
-  closable: Boolean,
   bottomFixedHeight: { type: Number, default: 50 }, // 하단 버튼 높이
 })
 
@@ -82,21 +74,6 @@ function selectTab(value) {
   if (value === currentTab.value) return
   currentTab.value = value
   emit('update:modelValue', value)
-}
-
-/* 탭 제거 */
-function removeTab(tab) {
-  const idx = localTabs.value.findIndex(t => t.value === tab.value)
-  localTabs.value = localTabs.value.filter(t => t.value !== tab.value)
-  emit('remove', tab)
-
-  if (currentTab.value === tab.value) {
-    const next = localTabs.value[idx] || localTabs.value[idx - 1]
-    currentTab.value = next?.value || ''
-    emit('update:modelValue', currentTab.value)
-  }
-
-  updateBodyHeight()
 }
 
 /* tabs-body 높이 계산 */
