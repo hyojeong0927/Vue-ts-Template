@@ -1,34 +1,17 @@
 <template>
   <section>
     <h3>라인형 탭</h3>
-    <BaseTabs v-model="active1" :tabs="tabs" variant="line">
+    <div class="content-box" style="min-height: 100px">유동적 사이즈의 이미지가 들어 감</div>
+    <BaseTabs v-model="active1" :tabs="tabs" variant="line" :bottomFixedHeight="50">
       <template #home>
-        <div style="height: 7000px">홈</div>
+        <div style="height: 700px">홈</div>
       </template>
       <template #profile>프로필 콘텐츠</template>
       <template #settings>설정 콘텐츠</template>
     </BaseTabs>
-    <!--
-    <h3>박스형 탭</h3>
-    <BaseTabs v-model="active2" :tabs="tabs" variant="box">
-      <template #home>홈 콘텐츠</template>
-      <template #profile>프로필 콘텐츠</template>
-      <template #settings>설정 콘텐츠</template>
-    </BaseTabs>
-
-    <h3>필형 탭</h3>
-    <BaseTabs v-model="active3" :tabs="tabs" variant="pill">
-      <template #home>홈 콘텐츠</template>
-      <template #profile>프로필 콘텐츠</template>
-      <template #settings>설정 콘텐츠</template>
-    </BaseTabs>
-
-    <h3>닫기 버튼 있는 탭</h3>
-    <BaseTabs v-model="active" :tabs="tabs" variant="box" closable @remove="onTabRemove">
-      <template #home>홈 콘텐츠</template>
-      <template #profile>프로필 콘텐츠</template>
-      <template #settings>설정 콘텐츠</template>
-    </BaseTabs> -->
+    <div
+      style="position: fixed; bottom: 0; width: 100%; background-color: #000; height: 50px"
+    ></div>
   </section>
 </template>
 
@@ -36,7 +19,6 @@
 import { ref } from 'vue'
 import BaseTabs from '@/components/tabs/BaseTabs.vue'
 
-// --- TypeScript 제거: TabItem 타입 제거
 const tabs = [
   { label: '홈', value: 'home' },
   { label: '프로필', value: 'profile' },
@@ -44,12 +26,5 @@ const tabs = [
   { label: '추가', value: 'extra' },
 ]
 
-const active = ref('home')
 const active1 = ref('home')
-const active2 = ref('home')
-const active3 = ref('home')
-
-function onTabRemove(tab) {
-  console.log('탭 삭제됨:', tab)
-}
 </script>

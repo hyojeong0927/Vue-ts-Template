@@ -1,52 +1,49 @@
 <template>
-  <div class="tabs-container" :class="variant">
+  <div class="tabs-container" :class="variant" ref="tabsContainer">
+    <!-- 상단 슬롯: 탭 외부 콘텐츠 -->
+    <slot name="top"></slot>
+
     <!-- 탭 헤더 -->
-    <div class="tabs-header" role="tablist">
-      <button
-        v-for="tab in localTabs"
-        :key="tab.value"
-        class="tab-btn"
-        :class="{ active: currentTab === tab.value, disabled: tab.disabled }"
-        role="tab"
-        :aria-selected="currentTab === tab.value"
-        :tabindex="currentTab === tab.value ? 0 : -1"
-        @click="selectTab(tab.value)"
-      >
-        {{ tab.label }}
-        <span
-          v-if="closable && !tab.disabled"
-          class="close-btn"
-          @click.stop="removeTab(tab)"
-          title="닫기"
-          >✕</span
+    <div class="tabs-header" ref="headerRef" role="tablist">
+      <div class="tabs-scroll">
+        <button
+          v-for="tab in localTabs"
+          :key="tab.value"
+          class="tab-btn"
+          :class="{ active: currentTab === tab.value, disabled: tab.disabled }"
+          role="tab"
+          :aria-selected="currentTab === tab.value"
+          :tabindex="currentTab === tab.value ? 0 : -1"
+          @click="selectTab(tab.value)"
         >
-      </button>
+          {{ tab.label }}
+          <span
+            v-if="closable && !tab.disabled"
+            class="close-btn"
+            @click.stop="removeTab(tab)"
+            title="닫기"
+            >✕</span
+          >
+        </button>
+      </div>
     </div>
 
-    <!-- 탭 콘텐츠 -->
-    <div class="tabs-body">
+    <!-- 탭 콘텐츠 (스크롤) -->
+    <div class="tabs-body" ref="bodyRef">
       <slot :name="currentTab"></slot>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 
 const props = defineProps({
-  tabs: {
-    type: Array,
-    required: true,
-  },
-  modelValue: {
-    type: String,
-    default: '',
-  },
-  variant: {
-    type: String,
-    default: 'line',
-  },
+  tabs: { type: Array, required: true },
+  modelValue: { type: String, default: '' },
+  variant: { type: String, default: 'line' },
   closable: Boolean,
+  bottomFixedHeight: { type: Number, default: 50 }, // 하단 버튼 높이
 })
 
 const emit = defineEmits(['update:modelValue', 'remove'])
@@ -54,7 +51,11 @@ const emit = defineEmits(['update:modelValue', 'remove'])
 const localTabs = ref([...props.tabs])
 const currentTab = ref(props.modelValue || props.tabs?.[0]?.value || '')
 
-/* modelValue 변경 → 내부 currentTab 반영 */
+const tabsContainer = ref(null)
+const headerRef = ref(null)
+const bodyRef = ref(null)
+
+/* modelValue 변경 → currentTab 반영 */
 watch(
   () => props.modelValue,
   val => {
@@ -62,16 +63,16 @@ watch(
   }
 )
 
-/* tabs 변경 → localTabs 새로 세팅 */
+/* tabs 변경 → localTabs 갱신 */
 watch(
   () => props.tabs,
   newVal => {
     localTabs.value = [...newVal]
     if (!localTabs.value.find(t => t.value === currentTab.value)) {
-      // 존재하지 않는 탭이면 첫 번째로 이동
       currentTab.value = localTabs.value[0]?.value || ''
       emit('update:modelValue', currentTab.value)
     }
+    updateBodyHeight()
   },
   { deep: true }
 )
@@ -85,60 +86,89 @@ function selectTab(value) {
 
 /* 탭 제거 */
 function removeTab(tab) {
+  const idx = localTabs.value.findIndex(t => t.value === tab.value)
   localTabs.value = localTabs.value.filter(t => t.value !== tab.value)
   emit('remove', tab)
 
-  // 현재 탭이 삭제된 경우 → 첫 번째 탭 선택
   if (currentTab.value === tab.value) {
-    currentTab.value = localTabs.value[0]?.value || ''
+    const next = localTabs.value[idx] || localTabs.value[idx - 1]
+    currentTab.value = next?.value || ''
     emit('update:modelValue', currentTab.value)
   }
+
+  updateBodyHeight()
 }
 
-function setRealVH() {
-  const vh = window.innerHeight * 0.01
-  document.documentElement.style.setProperty('--real-vh', `${vh}px`)
+/* tabs-body 높이 계산 */
+function updateBodyHeight() {
+  nextTick(() => {
+    if (!bodyRef.value || !tabsContainer.value) return
+
+    const containerHeight = window.visualViewport
+      ? window.visualViewport.height
+      : window.innerHeight
+
+    const topSlot = tabsContainer.value.querySelector('[slot="top"]')
+    const topHeight = topSlot?.offsetHeight || 0
+    const headerHeight = headerRef.value?.offsetHeight || 0
+    const bottomHeight = props.bottomFixedHeight
+
+    const bodyHeight = containerHeight - topHeight - headerHeight - bottomHeight
+    bodyRef.value.style.height = `${bodyHeight}px`
+  })
 }
 
-setRealVH()
-window.addEventListener('resize', setRealVH)
+function handleResize() {
+  updateBodyHeight()
+}
+
+/* mounted & resize listener */
+onMounted(() => {
+  updateBodyHeight()
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', handleResize)
+  } else {
+    window.addEventListener('resize', handleResize)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (window.visualViewport) {
+    window.visualViewport.removeEventListener('resize', handleResize)
+  } else {
+    window.removeEventListener('resize', handleResize)
+  }
+})
 </script>
 
 <style scoped>
 .tabs-container {
-  height: calc(var(--real-vh, 1vh) * 100);
   width: 100%;
   display: flex;
   flex-direction: column;
 }
 
 .tabs-header {
-  display: flex;
-  gap: 4px;
-  border-bottom: 1px solid #ddd;
-}
-.tabs-body {
+  overflow-x: auto;
+  white-space: nowrap;
   -webkit-overflow-scrolling: touch;
-  min-height: 0;
-
-  padding-bottom: 80px;
-  overflow-y: auto;
-  flex: 1; /* 남는 영역 모두 차지 → 스크롤 영역이 됨 */
 }
+
+.tabs-scroll {
+  display: inline-flex;
+  gap: 12px;
+}
+
 .tab-btn {
-  position: relative;
+  flex: 0 0 auto;
   padding: 8px 16px;
-  font-size: 14px;
   border: none;
   background: transparent;
   cursor: pointer;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
 }
 
-.tab-btn:hover:not(.disabled) {
+.tab-btn.active {
+  font-weight: 600;
   color: #1976d2;
 }
 
@@ -149,54 +179,18 @@ window.addEventListener('resize', setRealVH)
 
 .close-btn {
   font-size: 12px;
+  margin-left: 4px;
   cursor: pointer;
   opacity: 0.6;
 }
+
 .close-btn:hover {
   opacity: 1;
   color: #e53935;
 }
 
-/* variants */
-.tabs-container.line .tab-btn {
-  border-bottom: 2px solid transparent;
-}
-.tabs-container.line .tab-btn.active {
-  color: #1976d2;
-  border-bottom-color: #1976d2;
-  font-weight: 600;
-}
-
-.tabs-container.box .tabs-header {
-  border-bottom: none;
-}
-.tabs-container.box .tab-btn {
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: #f9f9f9;
-}
-.tabs-container.box .tab-btn.active {
-  background: #1976d2;
-  color: white;
-  border-color: #1976d2;
-}
-
-.tabs-container.pill .tabs-header {
-  background: #f2f2f2;
-  border-radius: 50px;
-  padding: 4px;
-}
-.tabs-container.pill .tab-btn {
-  border-radius: 50px;
-  padding: 6px 16px;
-}
-.tabs-container.pill .tab-btn.active {
-  background: #1976d2;
-  color: white;
-  font-weight: 600;
-}
-
 .tabs-body {
-  padding: 16px 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 </style>
