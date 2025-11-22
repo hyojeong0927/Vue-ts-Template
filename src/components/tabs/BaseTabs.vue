@@ -42,7 +42,7 @@ const props = defineProps({
   bottomFixedHeight: { type: Number, default: 50 },
   scrollBody: { type: Boolean, default: true },
 
-  /** 🔥 outer만 true, inner는 false */
+  /** outer만 true, inner는 false */
   bodyLock: { type: Boolean, default: true },
 })
 
