@@ -1,28 +1,28 @@
 <template>
-  <div class="tabs-container" :class="variant" ref="tabsContainer">
-    <!-- 상단 슬롯: 탭 외부 콘텐츠 -->
-    <slot name="top"></slot>
+  <div class="tabs-wrap" :class="variant" ref="tabsWrap">
+    <!-- 탑 영역 -->
+    <div class="tabs-top" ref="topRef">
+      <slot name="top"></slot>
+    </div>
 
     <!-- 탭 헤더 -->
     <div class="tabs-header" ref="headerRef" role="tablist">
-      <div class="tabs-scroll">
+      <div class="tabs-header-inner">
         <button
           v-for="tab in localTabs"
           :key="tab.value"
           class="tab-btn"
           :class="{ active: currentTab === tab.value, disabled: tab.disabled }"
-          role="tab"
-          :aria-selected="currentTab === tab.value"
-          :tabindex="currentTab === tab.value ? 0 : -1"
           @click="selectTab(tab.value)"
+          :disabled="tab.disabled"
         >
           {{ tab.label }}
         </button>
       </div>
     </div>
 
-    <!-- 탭 콘텐츠 (스크롤) -->
-    <div class="tabs-body" ref="bodyRef">
+    <!-- 바디 -->
+    <div class="tabs-content" ref="contentRef" :class="{ 'no-scroll': !scrollBody }">
       <slot :name="currentTab"></slot>
     </div>
   </div>
@@ -35,19 +35,23 @@ const props = defineProps({
   tabs: { type: Array, required: true },
   modelValue: { type: String, default: '' },
   variant: { type: String, default: 'line' },
-  bottomFixedHeight: { type: Number, default: 50 }, // 하단 버튼 높이
+  bottomFixedRef: { type: Object, default: null },
+  bottomFixedHeight: { type: Number, default: 50 },
+  scrollBody: { type: Boolean, default: true },
+  bodyLock: { type: Boolean, default: true }, // outer만 true
 })
 
-const emit = defineEmits(['update:modelValue', 'remove'])
+const emit = defineEmits(['update:modelValue'])
 
 const localTabs = ref([...props.tabs])
 const currentTab = ref(props.modelValue || props.tabs?.[0]?.value || '')
 
-const tabsContainer = ref(null)
+const tabsWrap = ref(null)
+const topRef = ref(null)
 const headerRef = ref(null)
-const bodyRef = ref(null)
+const contentRef = ref(null)
 
-/* modelValue 변경 → currentTab 반영 */
+/* modelValue → currentTab */
 watch(
   () => props.modelValue,
   val => {
@@ -55,7 +59,7 @@ watch(
   }
 )
 
-/* tabs 변경 → localTabs 갱신 */
+/* tabs 변경 시 */
 watch(
   () => props.tabs,
   newVal => {
@@ -69,105 +73,123 @@ watch(
   { deep: true }
 )
 
-/* 현재 탭 선택 */
-function selectTab(value) {
-  if (value === currentTab.value) return
-  currentTab.value = value
-  emit('update:modelValue', value)
+/* body scroll lock */
+function lockBody() {
+  if (props.bodyLock) {
+    document.body.classList.add('body-hidden')
+  }
 }
 
-/* tabs-body 높이 계산 */
+function unlockBody() {
+  if (props.bodyLock) {
+    document.body.classList.remove('body-hidden')
+  }
+}
+
+/* 탭 전환 */
+function selectTab(value) {
+  if (value === currentTab.value) return
+
+  lockBody() // outer만 작동됨
+
+  currentTab.value = value
+  emit('update:modelValue', value)
+
+  nextTick(() => updateBodyHeight())
+}
+
+/* 콘텐츠 높이 계산 */
 function updateBodyHeight() {
   nextTick(() => {
-    if (!bodyRef.value || !tabsContainer.value) return
+    if (!contentRef.value) return
 
-    const containerHeight = window.visualViewport
-      ? window.visualViewport.height
-      : window.innerHeight
+    const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight
 
-    const topSlot = tabsContainer.value.querySelector('[slot="top"]')
-    const topHeight = topSlot?.offsetHeight || 0
+    const topHeight = topRef.value?.offsetHeight || 0
     const headerHeight = headerRef.value?.offsetHeight || 0
-    const bottomHeight = props.bottomFixedHeight
+    const bottomHeight = props.bottomFixedRef?.value?.offsetHeight || props.bottomFixedHeight
 
-    const bodyHeight = containerHeight - topHeight - headerHeight - bottomHeight
-    bodyRef.value.style.height = `${bodyHeight}px`
+    const bodyHeight = viewportHeight - topHeight - headerHeight - bottomHeight
+    contentRef.value.style.height = `${bodyHeight}px`
   })
 }
 
+/* resize */
 function handleResize() {
   updateBodyHeight()
 }
 
-/* mounted & resize listener */
+/* mount */
 onMounted(() => {
+  lockBody()
   updateBodyHeight()
+
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', handleResize)
-  } else {
-    window.addEventListener('resize', handleResize)
   }
+  window.addEventListener('orientationchange', handleResize)
+  window.addEventListener('resize', handleResize)
 })
 
+/* unmount */
 onBeforeUnmount(() => {
+  unlockBody()
+
   if (window.visualViewport) {
     window.visualViewport.removeEventListener('resize', handleResize)
-  } else {
-    window.removeEventListener('resize', handleResize)
   }
+  window.removeEventListener('orientationchange', handleResize)
+  window.removeEventListener('resize', handleResize)
 })
 </script>
 
-<style scoped>
-.tabs-container {
+<style>
+/* ★ body-hidden은 반드시 글로벌 스타일이어야 동작 */
+body.body-hidden {
+  overflow: hidden !important;
+}
+
+/* Wrapper */
+.tabs-wrap {
   width: 100%;
   display: flex;
   flex-direction: column;
 }
 
-.tabs-header {
-  overflow-x: auto;
-  white-space: nowrap;
-  -webkit-overflow-scrolling: touch;
+/* top slot */
+.tabs-top {
+  flex: 0 0 auto;
 }
 
-.tabs-scroll {
-  display: inline-flex;
+/* header */
+.tabs-header {
+  flex: 0 0 auto;
+}
+.tabs-header-inner {
+  display: flex;
   gap: 12px;
 }
-
 .tab-btn {
-  flex: 0 0 auto;
   padding: 8px 16px;
   border: none;
   background: transparent;
   cursor: pointer;
 }
-
 .tab-btn.active {
-  font-weight: 600;
   color: #1976d2;
+  font-weight: 600;
 }
-
 .tab-btn.disabled {
   color: #aaa;
   cursor: not-allowed;
 }
 
-.close-btn {
-  font-size: 12px;
-  margin-left: 4px;
-  cursor: pointer;
-  opacity: 0.6;
-}
-
-.close-btn:hover {
-  opacity: 1;
-  color: #e53935;
-}
-
-.tabs-body {
+/* body scroll */
+.tabs-content {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+.tabs-content.no-scroll {
+  overflow-y: hidden !important;
 }
 </style>

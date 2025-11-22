@@ -3,6 +3,9 @@
     <h3>입력폼 예시</h3>
     <form>
       <div class="form-row">
+        <input type="text" placeholder="이름을 입력하세요" v-model="name" />
+      </div>
+      <div class="form-row">
         <BaseInput
           v-model="name"
           label="이름"
@@ -52,7 +55,7 @@ import BaseInput from '@/components/input/InputGroup.vue'
 import PhoneInput from '@/components/input/PhoneInput.vue'
 import BaseSelect from '@/components/selectbox/Selectbox.vue'
 
-const name = ref('')
+const name = ref('ㅇㅇㅇ')
 const email = ref('')
 const password = ref('')
 const selectedOption = ref('')
