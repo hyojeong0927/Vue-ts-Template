@@ -4,6 +4,7 @@
     <form>
       <div class="form-row">
         <input type="text" placeholder="이름을 입력하세요" v-model="name" />
+        <input type="number" placeholder="계좌번호를 입력하세요" v-model="account" />
       </div>
       <div class="form-row">
         <BaseInput
@@ -56,6 +57,7 @@ import PhoneInput from '@/components/input/PhoneInput.vue'
 import BaseSelect from '@/components/selectbox/Selectbox.vue'
 
 const name = ref('ㅇㅇㅇ')
+const account = ref('112313')
 const email = ref('')
 const password = ref('')
 const selectedOption = ref('')
