@@ -38,8 +38,7 @@ const customStyle = computed(() => ({
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100%;
-  min-height: 100vh; /* 화면 전체 높이 확보 */
+  min-height: 100vh;
   box-sizing: border-box;
   transition: all 0.3s ease-in-out; /* 반응형 애니메이션 */
 }

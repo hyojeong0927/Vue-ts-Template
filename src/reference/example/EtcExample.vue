@@ -7,8 +7,6 @@
   </Title>
   <Title title="게시판" tag="h3" align="center" />
 
-  <h3>Accordion</h3>
-  <Accordion :items="accordionItems" :allowMultiple="true" />
   <h3>Badge</h3>
   <Badge>텍스트</Badge>
   <Badge outline>텍스트</Badge>
@@ -73,18 +71,12 @@
 </template>
 
 <script setup>
-import Accordion from '@/components/etc/Accordion.vue'
 import Badge from '@/components/etc/Badge.vue'
 import BtnArea from '@/components/etc/BtnArea.vue'
 import List from '@/components/etc/List.vue'
 import Title from '@/components/etc/Title.vue'
 import BoxList from '@/components/etc/Box.vue'
 import ProgressBar from '@/components/etc/ProgressBar.vue'
-
-const accordionItems = [
-  { title: '제목1', content: '내용1내용내용내용내용내용내용' },
-  { title: '제목2', content: '내용2' },
-]
 </script>
 
 <style lang="scss" scoped></style>

@@ -1,5 +1,5 @@
 <template>
-  <header class="header">
+  <header class="header global-header">
     <div class="logo">My Vue App</div>
 
     <button class="menu-toggle" @click="toggleMenu">☰</button>
@@ -18,6 +18,9 @@
         </RouterLink>
 
         <div class="submenu" :class="{ open: openMenu === 'components' }">
+          <RouterLink to="/example/accordion" :class="{ active: isActive('/example/accordion') }"
+            >Accordion</RouterLink
+          >
           <RouterLink to="/example/agree" :class="{ active: isActive('/example/agree') }"
             >Agree Form</RouterLink
           >
@@ -190,6 +193,13 @@ nav a.active {
 }
 
 @media (max-width: 768px) {
+  .global-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 999;
+  }
   .menu-toggle {
     display: block;
   }

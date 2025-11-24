@@ -36,8 +36,8 @@ const className = computed(() => props.className || '')
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: auto;
   width: 100%;
+  min-height: calc(100vh - 80px);
   transition: all 0.3s ease-in-out;
 }
 
