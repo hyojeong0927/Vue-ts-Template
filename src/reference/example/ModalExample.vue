@@ -6,8 +6,11 @@
       <BaseButton variant="primary" @click="openModalLarge = true">팝업 large</BaseButton>
       <BaseButton variant="primary" @click="showAlert = true">Alert 팝업</BaseButton>
       <BaseButton variant="primary" @click="showConfirm = true">Confirm 팝업 small</BaseButton>
+      <BaseButton @click="showSheet = true">BottomSheet 시트 열기</BaseButton>
     </div>
-
+    <BaseBottomSheet :visible="showSheet" @close="showSheet = false">
+      <div style="padding: 20px; height: 500px">바텀시트 내용!</div>
+    </BaseBottomSheet>
     <!-- 기본 팝업 -->
     <BaseModal
       :visible="openModal"
@@ -59,6 +62,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import BaseBottomSheet from '@/components/modal/BottomSheet.vue'
 import BaseModal from '@/components/modal/BaseModal.vue'
 import BaseButton from '@/components/Button.vue'
 
@@ -66,6 +70,7 @@ const openModal = ref(false)
 const openModalLarge = ref(false)
 const showAlert = ref(false)
 const showConfirm = ref(false)
+const showSheet = ref(false)
 
 function onConfirm() {
   alert('삭제 완료!')
