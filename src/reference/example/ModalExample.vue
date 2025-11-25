@@ -9,7 +9,12 @@
     </div>
 
     <!-- 기본 팝업 -->
-    <BaseModal :visible="openModal" title="회원 정보 확인" @close="openModal = false">
+    <BaseModal
+      :visible="openModal"
+      title="회원 정보 확인"
+      @close="openModal = false"
+      :closeOnOverlay="false"
+    >
       <p>이 팝업은 재사용 가능한 컴포넌트입니다.</p>
       <template #footer>
         <button class="btn" @click="openModal = false">닫기</button>

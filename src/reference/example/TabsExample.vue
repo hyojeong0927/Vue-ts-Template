@@ -17,13 +17,7 @@
 
       <!-- 탭 콘텐츠 -->
       <template #home>
-        <BaseTabs
-          v-model="active2"
-          :tabs="tabs2"
-          :scrollBody="false"
-          :bodyLock="false"
-          variant="box"
-        >
+        <BaseTabs v-model="active2" :tabs="tabs2" :scrollBody="false" variant="box">
           <template #tabmenu1></template>
           <template #tabmenu2>
             <div style="height: 700px">스크롤 없음</div>

@@ -1,6 +1,6 @@
 <template>
   <transition name="fade">
-    <div v-if="visible" class="modal-overlay" @click.self="close">
+    <div v-if="visible" class="modal-overlay" @click.self="closeOnOverlay && close()">
       <transition name="slide">
         <div class="modal-content" :class="sizeClass">
           <!-- 헤더 -->
@@ -45,6 +45,7 @@ const props = defineProps({
   message: { type: String, default: '' },
   size: { type: String, default: 'medium' }, // small, medium, large
   type: { type: String, default: 'default' }, // default, alert, confirm
+  closeOnOverlay: { type: Boolean, default: true },
 })
 
 const emit = defineEmits(['close', 'confirm'])

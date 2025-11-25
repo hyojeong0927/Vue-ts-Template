@@ -21,7 +21,7 @@
       </div>
     </div>
 
-    <!-- 바디 -->
+    <!-- 탭 콘텐츠 -->
     <div class="tabs-content" ref="contentRef" :class="{ 'no-scroll': !scrollBody }">
       <slot :name="currentTab"></slot>
     </div>
@@ -29,202 +29,97 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 
-/* ------------------------
-   Props
--------------------------*/
 const props = defineProps({
   tabs: { type: Array, required: true },
   modelValue: { type: String, default: '' },
   variant: { type: String, default: 'line' },
   bottomFixedRef: { type: Object, default: null },
   bottomFixedHeight: { type: Number, default: 50 },
-  scrollBody: { type: Boolean, default: true },
-
-  /** outer만 true, inner는 false */
-  bodyLock: { type: Boolean, default: true },
+  scrollBody: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['update:modelValue'])
 
-/* ------------------------
-   State
--------------------------*/
-const localTabs = ref([...props.tabs])
-const currentTab = ref(props.modelValue || props.tabs?.[0]?.value || '')
+const didLock = ref(false)
 
-const topRef = ref(null)
-const headerRef = ref(null)
-const contentRef = ref(null)
-
-/* ------------------------
-   Watchers
--------------------------*/
-watch(
-  () => props.modelValue,
-  val => {
-    if (val !== currentTab.value) currentTab.value = val
-  }
-)
-
-watch(
-  () => props.tabs,
-  newVal => {
-    localTabs.value = [...newVal]
-    if (!localTabs.value.find(t => t.value === currentTab.value)) {
-      currentTab.value = localTabs.value[0]?.value || ''
-      emit('update:modelValue', currentTab.value)
-    }
-    updateBodyHeight()
-  },
-  { deep: true }
-)
-
-/* ------------------------
-   Body Lock
--------------------------*/
 function lockBody() {
-  if (props.bodyLock) {
-    document.body.classList.add('body-hidden')
-  }
+  const target = document.querySelector('main')
+  if (!target) return
+  target.classList.add('overflow-hidden')
+  didLock.value = true
 }
 
 function unlockBody() {
-  if (props.bodyLock) {
-    document.body.classList.remove('body-hidden')
-  }
+  if (!didLock.value) return
+  const target = document.querySelector('main')
+  if (!target) return
+  target.classList.remove('overflow-hidden')
+  didLock.value = false
 }
 
-/* ------------------------
-   Tab Change
--------------------------*/
-function selectTab(value) {
-  if (value === currentTab.value) return
+const localTabs = ref([...props.tabs])
+const currentTab = ref(props.modelValue || props.tabs?.[0]?.value || '')
 
-  lockBody()
-
-  currentTab.value = value
-  emit('update:modelValue', value)
-
-  nextTick(() => {
-    updateBodyHeight()
-    requestAnimationFrame(() => {
-      preventIOSBounce(contentRef.value)
-    })
-  })
+function selectTab(val) {
+  if (val === currentTab.value) return
+  currentTab.value = val
+  emit('update:modelValue', val)
 }
 
-/* ------------------------
-   Height Calculation
--------------------------*/
 function updateBodyHeight() {
   nextTick(() => {
-    if (!contentRef.value) return
+    const content = document.querySelector('.tabs-content')
+    if (!content) return
 
-    const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight
+    if (!props.scrollBody) {
+      content.style.height = 'auto'
+      return
+    }
 
-    const topHeight = topRef.value?.offsetHeight || 0
-    const headerHeight = headerRef.value?.offsetHeight || 0
-    const bottomHeight = props.bottomFixedRef?.value?.offsetHeight || props.bottomFixedHeight
+    const vh = window.innerHeight
+    const top = document.querySelector('.tabs-top')?.offsetHeight || 0
+    const header = document.querySelector('.tabs-header')?.offsetHeight || 0
+    const bottom = props.bottomFixedRef?.value?.offsetHeight || props.bottomFixedHeight
 
-    const bodyHeight = viewportHeight - topHeight - headerHeight - bottomHeight
-    contentRef.value.style.height = `${bodyHeight}px`
+    content.style.height = `${vh - top - header - bottom}px`
   })
 }
 
-/* ------------------------
-   Resize 대응
--------------------------*/
-function handleResize() {
-  updateBodyHeight()
-  requestAnimationFrame(() => {
-    preventIOSBounce(contentRef.value)
-  })
-}
-
-/* ------------------------
-   iOS Safari Bounce 제거
--------------------------*/
-let iosBounceListener = null
-
-function preventIOSBounce(el) {
-  if (!el) return
-
-  const isiOS = typeof window !== 'undefined' && /iP(ad|hone|od)/.test(navigator.userAgent)
-
-  if (!isiOS) return
-
-  if (iosBounceListener) {
-    el.removeEventListener('touchstart', iosBounceListener)
-    iosBounceListener = null
-  }
-
-  iosBounceListener = function () {
-    const top = el.scrollTop
-    const totalScroll = el.scrollHeight
-    const currentScroll = top + el.offsetHeight
-
-    if (top <= 0) el.scrollTop = 1
-    else if (currentScroll >= totalScroll) el.scrollTop = top - 1
-  }
-
-  el.addEventListener('touchstart', iosBounceListener)
-}
-
-/* ------------------------
-   Lifecycle
--------------------------*/
 onMounted(() => {
-  lockBody()
+  if (props.scrollBody) lockBody()
   updateBodyHeight()
-
-  requestAnimationFrame(() => {
-    preventIOSBounce(contentRef.value)
-  })
-
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', handleResize)
-  }
-  window.addEventListener('orientationchange', handleResize)
-  window.addEventListener('resize', handleResize)
+  window.addEventListener('resize', updateBodyHeight)
 })
 
 onBeforeUnmount(() => {
   unlockBody()
-
-  if (window.visualViewport) {
-    window.visualViewport.removeEventListener('resize', handleResize)
-  }
-  window.removeEventListener('orientationchange', handleResize)
-  window.removeEventListener('resize', handleResize)
+  window.removeEventListener('resize', updateBodyHeight)
 })
 </script>
 
 <style>
 html,
 body {
-  overscroll-behavior: none; /* Android, Chrome overscroll 방지 */
-  -webkit-overflow-scrolling: touch; /* iOS 부드러운 스크롤 */
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
 }
 
-body.body-hidden {
+main.overflow-hidden {
   overflow: hidden !important;
 }
 
-/* Wrapper */
 .tabs-wrap {
   width: 100%;
   display: flex;
   flex-direction: column;
 }
 
-/* top slot */
 .tabs-top {
   flex: 0 0 auto;
 }
 
-/* header */
 .tabs-header {
   flex: 0 0 auto;
 }
@@ -251,14 +146,14 @@ body.body-hidden {
   cursor: not-allowed;
 }
 
-/* body scroll */
 .tabs-content {
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tabs-content.no-scroll {
   overflow-y: hidden !important;
+  height: auto !important;
 }
 </style>
