@@ -1,5 +1,5 @@
 <template>
-  <div class="tabs-wrap" :class="variant" ref="tabsWrap">
+  <div class="tabs-wrap" :class="[variant]" ref="tabsWrap">
     <!-- 탑 영역 -->
     <div class="tabs-top" ref="topRef">
       <slot name="top"></slot>
@@ -29,8 +29,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 
+/* ------------------------
+   Props
+------------------------ */
 const props = defineProps({
   tabs: { type: Array, required: true },
   modelValue: { type: String, default: '' },
@@ -42,61 +45,116 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue'])
 
-const didLock = ref(false)
-
-function lockBody() {
-  const target = document.querySelector('main')
-  if (!target) return
-  target.classList.add('overflow-hidden')
-  didLock.value = true
-}
-
-function unlockBody() {
-  if (!didLock.value) return
-  const target = document.querySelector('main')
-  if (!target) return
-  target.classList.remove('overflow-hidden')
-  didLock.value = false
-}
+/* ------------------------
+   Refs
+------------------------ */
+const topRef = ref(null)
+const headerRef = ref(null)
+const contentRef = ref(null)
 
 const localTabs = ref([...props.tabs])
 const currentTab = ref(props.modelValue || props.tabs?.[0]?.value || '')
 
+/* ------------------------
+   Tab Change
+------------------------ */
 function selectTab(val) {
   if (val === currentTab.value) return
   currentTab.value = val
   emit('update:modelValue', val)
 }
 
+/* ------------------------
+   Scroll Lock
+------------------------ */
+const didLock = ref(false)
+
+function lockBody() {
+  const main = document.querySelector('main')
+  if (!main) return
+
+  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+
+  main.style.paddingRight = `${scrollbarWidth}px`
+  main.classList.add('overflow-hidden')
+  didLock.value = true
+}
+
+function unlockBody() {
+  if (!didLock.value) return
+
+  const main = document.querySelector('main')
+  if (!main) return
+
+  main.style.paddingRight = ''
+  main.classList.remove('overflow-hidden')
+  didLock.value = false
+}
+
+/* ------------------------
+   Dynamic Height
+------------------------ */
 function updateBodyHeight() {
   nextTick(() => {
-    const content = document.querySelector('.tabs-content')
-    if (!content) return
+    if (!contentRef.value) return
 
     if (!props.scrollBody) {
-      content.style.height = 'auto'
+      contentRef.value.style.height = 'auto'
       return
     }
 
     const vh = window.innerHeight
-    const top = document.querySelector('.tabs-top')?.offsetHeight || 0
-    const header = document.querySelector('.tabs-header')?.offsetHeight || 0
+    const top = topRef.value?.offsetHeight || 0
+    const header = headerRef.value?.offsetHeight || 0
     const bottom = props.bottomFixedRef?.value?.offsetHeight || props.bottomFixedHeight
 
-    content.style.height = `${vh - top - header - bottom}px`
+    const height = vh - top - header - bottom
+    contentRef.value.style.height = `${height}px`
   })
 }
 
+/* ------------------------
+   ResizeObserver
+------------------------ */
+let observer
+
 onMounted(() => {
+  // body scroll lock
   if (props.scrollBody) lockBody()
+
   updateBodyHeight()
+
+  observer = new ResizeObserver(updateBodyHeight)
+  if (topRef.value) observer.observe(topRef.value)
+  if (headerRef.value) observer.observe(headerRef.value)
+
   window.addEventListener('resize', updateBodyHeight)
 })
 
 onBeforeUnmount(() => {
-  unlockBody()
+  observer?.disconnect()
   window.removeEventListener('resize', updateBodyHeight)
+  unlockBody()
 })
+
+/* ------------------------
+   Watchers
+------------------------ */
+watch(
+  () => props.scrollBody,
+  val => {
+    if (val) lockBody()
+    else unlockBody()
+    updateBodyHeight()
+  }
+)
+
+watch(
+  () => props.tabs,
+  val => {
+    localTabs.value = [...val]
+  }
+)
 </script>
 
 <style>
@@ -153,7 +211,6 @@ main.overflow-hidden {
 }
 
 .tabs-content.no-scroll {
-  overflow-y: hidden !important;
-  height: auto !important;
+  overflow-y: hidden;
 }
 </style>
