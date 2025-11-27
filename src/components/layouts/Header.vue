@@ -2,129 +2,147 @@
   <header class="header global-header">
     <div class="logo">My Vue App</div>
 
+    <!-- 모바일 메뉴 버튼 -->
     <button class="menu-toggle" @click="toggleMenu">☰</button>
 
     <nav :class="{ open: menuOpen }">
-      <!-- Home -->
-      <RouterLink to="/" :class="{ active: isActive('/') }">Publish Status</RouterLink>
-      <!-- Components -->
-      <div class="menu-item" @mouseover="handleMouseOver('components')" @mouseout="handleMouseOut">
+      <!-- 1차 메뉴 반복 -->
+      <div
+        v-for="(item, index) in menuData"
+        :key="index"
+        class="menu-item"
+        @mouseover="onHover(item)"
+        @mouseout="onLeave"
+      >
+        <!-- 1차 메뉴 -->
         <RouterLink
-          to="/example/agree"
-          @click.prevent="toggleSubmenu('components')"
-          :class="{ active: isActive('/example') }"
+          :to="item.to"
+          :class="{ active: isActive(item.to) }"
+          @click.prevent="onClickMenu(item)"
         >
-          Components ▾
+          {{ item.label }}
+          <span v-if="item.children && item.children.length">▾</span>
         </RouterLink>
 
-        <div class="submenu" :class="{ open: openMenu === 'components' }">
-          <RouterLink to="/example/accordion" :class="{ active: isActive('/example/accordion') }"
-            >Accordion</RouterLink
-          >
-          <RouterLink to="/example/agree" :class="{ active: isActive('/example/agree') }"
-            >Agree Form</RouterLink
-          >
-          <RouterLink to="/example/button" :class="{ active: isActive('/example/button') }"
-            >Button</RouterLink
-          >
-          <RouterLink to="/example/checkbox" :class="{ active: isActive('/example/checkbox') }"
-            >Checkbox&Radio</RouterLink
-          >
-          <RouterLink to="/example/datepicker" :class="{ active: isActive('/example/datepicker') }"
-            >DatePicker</RouterLink
-          >
-          <RouterLink to="/example/etc" :class="{ active: isActive('/example/etc') }"
-            >etc</RouterLink
-          >
+        <!-- 서브메뉴 -->
+        <div class="submenu" :class="{ open: openMenu === item.key }">
           <RouterLink
-            to="/example/floatingbar"
-            :class="{ active: isActive('/example/floatingbar') }"
-            >FloatingBar</RouterLink
+            v-for="child in item.children"
+            :key="child.to"
+            :to="child.to"
+            :class="{ active: isActive(child.to) }"
+            class="submenu-link"
+            @click="closeMobileMenu"
           >
-          <RouterLink to="/example/form" :class="{ active: isActive('/example/form') }"
-            >Form</RouterLink
-          >
-          <RouterLink to="/example/modal" :class="{ active: isActive('/example/modal') }"
-            >Modal</RouterLink
-          >
-          <RouterLink to="/example/selectbox" :class="{ active: isActive('/example/selectbox') }"
-            >Selectbox</RouterLink
-          >
-          <RouterLink to="/example/step" :class="{ active: isActive('/example/step') }"
-            >Step</RouterLink
-          >
-          <RouterLink to="/example/tab" :class="{ active: isActive('/example/tab') }"
-            >Tab</RouterLink
-          >
-        </div>
-      </div>
-
-      <!-- Guide -->
-      <div class="menu-item" @mouseover="handleMouseOver('guide')" @mouseout="handleMouseOut">
-        <RouterLink
-          to="/guide/rule"
-          @click.prevent="toggleSubmenu('guide')"
-          :class="{ active: isActive(['/guide']) }"
-        >
-          Guide ▾
-        </RouterLink>
-
-        <div class="submenu" :class="{ open: openMenu === 'guide' }">
-          <RouterLink to="/guide/rule" :class="{ active: isActive('/guide/rule') }"
-            >Rule</RouterLink
-          >
-          <RouterLink to="/guide/term" :class="{ active: isActive('/guide/term') }"
-            >Term</RouterLink
-          >
+            {{ child.label }}
+          </RouterLink>
         </div>
       </div>
     </nav>
   </header>
 </template>
-
-<script setup lang="ts">
+<script setup>
 import { ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
-const menuOpen = ref(false)
-const openMenu = ref<string | null>(null)
+const router = useRouter()
 const route = useRoute()
+
+/* -----------------------------------------
+   메뉴 데이터 (JS 버전)
+----------------------------------------- */
+const menuData = [
+  {
+    key: 'home',
+    label: 'Publish Status',
+    to: '/',
+  },
+  {
+    key: 'components',
+    label: 'Components',
+    to: '/example/agree',
+    children: [
+      { label: 'Accordion', to: '/example/accordion' },
+      { label: 'Agree Form', to: '/example/agree' },
+      { label: 'Button', to: '/example/button' },
+      { label: 'Checkbox & Radio', to: '/example/checkbox' },
+      { label: 'DatePicker', to: '/example/datepicker' },
+      { label: 'etc', to: '/example/etc' },
+      { label: 'FloatingBar', to: '/example/floatingbar' },
+      { label: 'Form', to: '/example/form' },
+      { label: 'Modal', to: '/example/modal' },
+      { label: 'Selectbox', to: '/example/selectbox' },
+      { label: 'Step', to: '/example/step' },
+      { label: 'Tab', to: '/example/tab' },
+    ],
+  },
+  {
+    key: 'guide',
+    label: 'Guide',
+    to: '/guide/rule',
+    children: [
+      { label: 'Rule', to: '/guide/rule' },
+      { label: 'Term', to: '/guide/term' },
+    ],
+  },
+]
+
+/* -----------------------------------------
+   상태값
+----------------------------------------- */
+const menuOpen = ref(false) // 모바일 전체 메뉴 열림
+const openMenu = ref(null) // 어떤 서브메뉴가 열렸는지
+
+/* -----------------------------------------
+   함수 정의
+----------------------------------------- */
+const isMobile = () => window.innerWidth <= 768
 
 const toggleMenu = () => {
   menuOpen.value = !menuOpen.value
 }
 
-const isActive = (path: string | string[]) => {
-  if (Array.isArray(path)) {
-    return path.some(p => route.path === p || route.path.startsWith(p + '/'))
-  }
+const closeMobileMenu = () => {
+  if (isMobile()) menuOpen.value = false
+}
+
+const isActive = path => {
   return route.path === path || route.path.startsWith(path + '/')
 }
 
-const toggleSubmenu = (menuName: string) => {
-  if (isMobile()) {
-    openMenu.value = openMenu.value === menuName ? null : menuName
+/* PC - 호버 시 열기 */
+const onHover = item => {
+  if (!isMobile() && item.children) {
+    openMenu.value = item.key
   }
 }
 
-const handleMouseOver = (menuName: string) => {
-  if (!isMobile()) {
-    openMenu.value = menuName
-  }
-}
-
-const handleMouseOut = (e: MouseEvent) => {
-  const target = e.currentTarget as HTMLElement
-  const related = e.relatedTarget as HTMLElement | null
-
-  if (related && target.contains(related)) return
+const onLeave = () => {
   if (!isMobile()) openMenu.value = null
 }
 
-const isMobile = () => window.innerWidth <= 768
-</script>
+/* 모바일 - 두 번 클릭 시 이동 */
+const onClickMenu = item => {
+  if (!isMobile()) return
 
+  if (!item.children) {
+    router.push(item.to)
+    closeMobileMenu()
+    return
+  }
+
+  if (openMenu.value === item.key) {
+    router.push(item.to)
+    closeMobileMenu()
+  } else {
+    openMenu.value = item.key
+  }
+}
+</script>
 <style scoped>
+/* -----------------------------------------
+   PC 기본 스타일
+----------------------------------------- */
 .header {
   display: flex;
   justify-content: space-between;
@@ -135,13 +153,13 @@ const isMobile = () => window.innerWidth <= 768
 }
 
 .logo {
-  font-weight: bold;
   font-size: 1.2rem;
+  font-weight: bold;
 }
 
 nav {
   display: flex;
-  gap: 15px;
+  gap: 20px;
 }
 
 nav a {
@@ -150,25 +168,24 @@ nav a {
 }
 
 nav a.active {
-  font-weight: bold;
+  font-weight: 700;
   text-decoration: underline;
 }
 
+/* 드롭다운 */
 .menu-item {
   position: relative;
 }
 
-/* 드롭다운 메뉴 */
 .submenu {
   display: none;
   position: absolute;
   top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
   background: #34495e;
+  min-width: 160px;
+  z-index: 100;
   flex-direction: column;
-  min-width: 150px;
-  z-index: 10;
 }
 
 .submenu.open {
@@ -177,19 +194,21 @@ nav a.active {
 
 .submenu a {
   padding: 10px;
-  color: white;
 }
 
 .submenu a:hover {
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* -----------------------------------------
+   모바일 스타일
+----------------------------------------- */
 .menu-toggle {
   display: none;
+  font-size: 1.5rem;
   background: none;
   border: none;
   color: white;
-  font-size: 1.5rem;
 }
 
 @media (max-width: 768px) {
@@ -200,17 +219,18 @@ nav a.active {
     width: 100%;
     z-index: 999;
   }
+
   .menu-toggle {
     display: block;
   }
 
   nav {
-    display: none;
-    flex-direction: column;
     position: absolute;
     top: 60px;
     left: 0;
     right: 0;
+    display: none;
+    flex-direction: column;
     background: #2c3e50;
   }
 
@@ -218,30 +238,23 @@ nav a.active {
     display: flex;
   }
 
-  .menu-item {
-    flex-direction: column;
-    width: 100%;
-  }
-
   .menu-item > a {
-    padding: 10px;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   }
 
   .submenu {
-    position: static;
-    left: 0;
-    transform: none;
-    background: #3b4c5a;
     display: none;
+    position: static;
+    background: #3b4c5a;
   }
 
   .submenu.open {
     display: flex;
   }
 
-  .submenu a {
-    padding-left: 30px;
+  .submenu-link {
+    padding-left: 30px !important;
   }
 }
 </style>

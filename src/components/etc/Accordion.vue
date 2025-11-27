@@ -4,15 +4,17 @@ import { ref, nextTick } from 'vue'
 const props = defineProps({
   items: { type: Array, required: true },
   allowMultiple: { type: Boolean, default: false },
+  agree: { type: Boolean, default: false }, // 약관모드 여부
 })
 
 /* 열림 상태 */
 const activeIndexes = ref([0])
 
-/* 각 아코디언 DOM 저장 */
-const itemRefs = ref([])
+/* DOM refs */
+const itemRefs = ref({})
 
 /* 아코디언 토글 */
+const checkStates = ref({})
 const toggle = async index => {
   const isOpen = activeIndexes.value.includes(index)
 
@@ -24,13 +26,20 @@ const toggle = async index => {
     activeIndexes.value = isOpen ? [] : [index]
   }
 
+  // ⭐ 버튼 클릭 시 체크박스도 선택되게
+  if (props.agree) {
+    checkStates.value[index] = !checkStates.value[index]
+  }
+
   await nextTick()
 
   if (!isOpen) scrollToHeader(index)
 }
 
-/* 약관 다음 버튼 기능 */
+/* 약관용 다음 버튼(agree=true 일 때만 사용됨) */
 const openNext = async index => {
+  if (!props.agree) return // ⭐ 일반 모드에서는 실행 금지
+
   const next = index + 1
   if (next >= props.items.length) return
 
@@ -39,14 +48,12 @@ const openNext = async index => {
   scrollToHeader(next)
 }
 
+/* 스크롤 이동 */
 const scrollToHeader = index => {
   const el = itemRefs.value[index]
   if (!el) return
 
-  el.scrollIntoView({
-    behavior: 'smooth',
-    block: 'start',
-  })
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 </script>
 
@@ -56,20 +63,45 @@ const scrollToHeader = index => {
       v-for="(item, index) in items"
       :key="index"
       class="accordion__item"
-      :ref="el => (itemRefs[index] = el)"
+      :ref="
+        el => {
+          if (!el) return
+          if (!itemRefs.value) itemRefs.value = {}
+          itemRefs.value[index] = el
+        }
+      "
     >
-      <button class="accordion__header" @click="toggle(index)">
-        {{ item.title }}
-        <span class="accordion__icon">
-          <i class="" v-if="activeIndexes.includes(index)"></i>
-          <i v-else></i>
+      <!-- 약관(agree=true) 모드 -->
+      <button class="accordion__header" @click="toggle(index)" v-show="agree">
+        <label class="agree-label" @click.stop>
+          <input type="checkbox" v-model="checkStates[index]" @click.stop />
+          {{ item.title }}
+        </label>
+
+        <span :class="['accordion__icon', activeIndexes.includes(index) && 'active']">
+          <i v-if="activeIndexes.includes(index)" class="icon-open"></i>
+          <i v-else class="icon-close"></i>
         </span>
       </button>
 
+      <!-- 일반 모드 -->
+      <button class="accordion__header" @click="toggle(index)" v-show="!agree">
+        {{ item.title }}
+        <span :class="['accordion__icon', activeIndexes.includes(index) && 'active']">
+          <i v-if="activeIndexes.includes(index)" class="icon-open"></i>
+          <i v-else class="icon-close"></i>
+        </span>
+      </button>
+
+      <!-- 콘텐츠 -->
       <transition name="acc">
         <div v-show="activeIndexes.includes(index)" class="accordion__content">
           <div class="accordion__inner">
-            <slot :name="'content-' + index" :openNext="() => openNext(index)" />
+            <!-- ⭐ agree 모드일 때만 openNext 전달 -->
+            <slot v-if="agree" :name="'content-' + index" :openNext="() => openNext(index)" />
+
+            <!-- ⭐ 일반 모드: openNext 전달 없음 -->
+            <slot v-else :name="'content-' + index" />
           </div>
         </div>
       </transition>
@@ -83,17 +115,14 @@ const scrollToHeader = index => {
   border-radius: 8px;
 }
 
-/* ⭐ 현재 아이템을 상단에 정렬할 여백 확보 */
 .accordion__item {
-  scroll-margin-top: 80px; /* 상단 헤더 or 여백 높이에 맞게 조정 */
+  scroll-margin-top: 80px;
 }
 
-/* 구분선 */
 .accordion__item + .accordion__item {
   border-top: 1px solid #ddd;
 }
 
-/* 헤더 버튼 */
 .accordion__header {
   width: 100%;
   padding: 14px 16px;
@@ -105,14 +134,21 @@ const scrollToHeader = index => {
   border-bottom: 1px solid #eee;
 }
 
+.agree-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .accordion__icon {
   transition: transform 0.3s;
 }
+
 .accordion__icon.active {
   transform: rotate(45deg);
 }
 
-/* 열림/닫힘 애니메이션 */
+/* transition */
 .acc-enter-from,
 .acc-leave-to {
   max-height: 0;

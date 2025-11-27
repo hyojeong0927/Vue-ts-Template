@@ -1,7 +1,7 @@
 <template>
   <div>
     <h3>Accordion</h3>
-    <Accordion :items="accordionItems">
+    <Accordion :items="accordionItems" :agree="true">
       <template #content-0="{ openNext }">
         <Sample />
         <button @click="openNext">동의하고 다음</button>
