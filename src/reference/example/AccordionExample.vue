@@ -1,4 +1,6 @@
 <template>
+  <Header2 />
+
   <Accordion :items="accordionItems">
     <template #content-0="{ openNext }">
       <Sample />
@@ -24,22 +26,27 @@
       <Sample />
       <button @click="openNext">다음</button>
     </template>
+
     <template #content-5="{ openNext }">
       <Sample />
       <button @click="openNext">다음</button>
     </template>
+
     <template #content-6="{ openNext }">
       <Sample />
       <button @click="openNext">다음</button>
     </template>
+
     <template #content-7="{ openNext }">
       <Sample />
       <button @click="openNext">다음</button>
     </template>
+
     <template #content-8="{ openNext }">
       <Sample />
       <button @click="openNext">다음</button>
     </template>
+
     <template #content-9="{ openNext }">
       <Sample />
       <button @click="openNext">다음</button>
@@ -49,6 +56,7 @@
 
 <script setup>
 import Accordion from '@/components/etc/Accordion.vue'
+import Header2 from '@/components/layouts/Header2.vue'
 import Sample from './Sample.vue'
 
 const accordionItems = [

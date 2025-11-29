@@ -2,11 +2,13 @@
   <RouterView />
 </template>
 
-<script setup lang="ts"></script>
+<script setup></script>
 
 <style>
-body {
-  margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+#app {
+  max-width: 100%;
+  width: 100%;
+  margin: 0 auto;
+  text-align: center;
 }
 </style>

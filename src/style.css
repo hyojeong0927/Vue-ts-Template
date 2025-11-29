@@ -22,17 +22,21 @@ a {
 a:hover {
   color: #535bf2;
 }
-
-body {
-  overflow: hidden;
-  margin: 0;
-  display: flex;
-  min-width: 320px;
-  min-height: 100vh;
-}
 html,
-body {
-  overflow-x: hidden !important;
+body,
+#app {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: auto !important;
+  min-height: 100% !important;
+  overflow-x: hidden;
+
+  display: block !important; /* flex/remove 방지 */
+}
+input[type='checkbox'] {
+  appearance: auto;
+  -webkit-appearance: checkbox;
 }
 h1 {
   font-size: 3.2em;

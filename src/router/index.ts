@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Layout from '@/components/layouts/Layout.vue'
+import LayoutAgree from '@/components/layouts/LayoutAgree.vue'
 
 // publish status
 import PublishStatus from '@/reference/work/PublishStatus.vue'
@@ -31,7 +32,7 @@ const routes = [
       { path: 'guide/rule', name: 'Rule', component: Rule },
       { path: 'guide/term', name: 'Term', component: Term },
       // example
-      { path: 'example/accordion', name: 'AccordionExample ', component: AccordionExample },
+
       { path: 'example/agree', name: 'AgreeFormExample', component: AgreeFormExample },
       { path: 'example/button', name: 'ButtonExample', component: ButtonExample },
       { path: 'example/checkbox', name: 'CheckboxExample', component: CheckboxExample },
@@ -44,6 +45,13 @@ const routes = [
       { path: 'example/step', name: 'StepExample', component: StepExample },
       { path: 'example/tab', name: 'TabsExample', component: TabsExample },
       { path: 'example/table', name: 'Table', component: TableExample },
+    ],
+  },
+  {
+    path: '/',
+    component: LayoutAgree,
+    children: [
+      { path: 'example/accordion', name: 'AccordionExample ', component: AccordionExample },
     ],
   },
 ]

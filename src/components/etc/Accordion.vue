@@ -1,25 +1,31 @@
 <template>
-  <div class="terms-page">
-    <!-- Accordion list -->
-    <section v-for="(item, index) in items" :key="index" class="acc-section">
-      <!-- TRUE HEADER (sticky 동작) -->
-      <button
-        class="acc-header"
-        :class="{ 'is-open': activeIndex === index }"
+  <main class="terms-page">
+    <div v-for="(item, index) in items" :key="index" class="acc-item">
+      <!-- HEADER (sticky) -->
+      <div
         :ref="el => setHeaderRef(el, index)"
-        @click="handleHeaderClick(index)"
+        class="acc-header"
+        :class="{ active: activeIndex === index }"
       >
-        <label class="agree-label" @click.stop>
-          <input type="checkbox" v-model="checkStates[index]" @click.stop />
-          <span class="agree-title">{{ item.title }}</span>
-        </label>
+        <!-- 체크 + 제목 -->
+        <div class="agree-label" @click.stop="toggleCheck(index)">
+          <div
+            class="check-icon"
+            :class="{ checked: checkStates[index] || activeIndex === index }"
+          ></div>
 
-        <span class="acc-icon" :class="{ active: activeIndex === index }"></span>
-      </button>
+          <span class="acc-title">{{ item.title }}</span>
+        </div>
 
-      <!-- CONTENT -->
+        <!-- 펼침 아이콘 -->
+        <div class="acc-toggle" @click.stop="toggleSection(index)">
+          <span class="acc-icon" :class="{ open: activeIndex === index }"></span>
+        </div>
+      </div>
+
+      <!-- BODY -->
       <transition name="acc">
-        <div v-show="activeIndex === index" class="acc-content">
+        <div v-show="activeIndex === index" class="acc-body">
           <div class="acc-inner">
             <component
               :is="$slots[`content-${index}`]"
@@ -28,23 +34,23 @@
           </div>
         </div>
       </transition>
-    </section>
-  </div>
+    </div>
+  </main>
 </template>
 
 <script setup>
-import { ref, reactive, nextTick, onMounted } from 'vue'
+import { ref, reactive, watch, nextTick, onMounted } from 'vue'
 
 /* props */
 const props = defineProps({
   items: { type: Array, required: true },
 })
 
-/* states */
+/* 상태 */
 const activeIndex = ref(0)
-const checkStates = ref({})
-const headerRefs = reactive([])
+const checkStates = ref([])
 
+const headerRefs = reactive([])
 const globalHeaderHeight = ref(0)
 
 /* ref setter */
@@ -52,41 +58,71 @@ const setHeaderRef = (el, index) => {
   if (el) headerRefs[index] = el
 }
 
-/* init */
+/* 체크 배열 초기화 */
+watch(
+  () => props.items,
+  items => {
+    checkStates.value = Array(items.length).fill(false)
+  },
+  { immediate: true }
+)
+
+/* 글로벌 헤더 높이 계산 */
 onMounted(() => {
-  // 체크박스 초기화
-  props.items.forEach((_, i) => {
-    if (checkStates.value[i] === undefined) checkStates.value[i] = false
-  })
-
-  // 글로벌 헤더 높이를 CSS 변수에 자동 삽입
-  const globalHeader = document.querySelector('.global-header')
-  globalHeaderHeight.value = globalHeader ? globalHeader.offsetHeight : 80
-
+  const gh = document.querySelector('.global-header')
+  globalHeaderHeight.value = gh ? gh.offsetHeight : 64
   document.documentElement.style.setProperty('--sticky-top', globalHeaderHeight.value + 'px')
 })
 
-/* Header 클릭 시 open + scroll 조정 */
-const handleHeaderClick = async index => {
+/* 아코디언 토글 */
+const toggleSection = async index => {
   activeIndex.value = index
-
   await nextTick()
   scrollToHeader(index)
 }
 
-/* 부드러운 스크롤 이동 */
-const scrollToHeader = index => {
+/* 체크 토글 */
+const toggleCheck = index => {
+  checkStates.value[index] = !checkStates.value[index]
+}
+
+/* 스크롤 이동 + 마지막 항목 보정 */
+const scrollToHeader = async index => {
   const el = headerRefs[index]
   if (!el) return
 
+  await nextTick()
+
   const rect = el.getBoundingClientRect()
-  const top =
-    window.pageYOffset + rect.top - globalHeaderHeight.value /* native sticky top 만큼 보정 */ - 2
+  const extraOffset = window.innerWidth < 600 ? 36 : 8
+
+  let targetY = window.scrollY + rect.top - globalHeaderHeight.value - extraOffset
+
+  /* ★★★ 마지막 항목 보정 — 한계 넘어가면 최대 스크롤로 고정 */
+  const maxScrollable = document.body.scrollHeight - window.innerHeight
+  if (targetY > maxScrollable) {
+    targetY = maxScrollable
+  }
 
   window.scrollTo({
-    top,
+    top: targetY,
     behavior: 'smooth',
   })
+
+  /* sticky 안정화 후 2차 보정 */
+  setTimeout(() => {
+    const rect2 = el.getBoundingClientRect()
+    let adjustY = window.scrollY + rect2.top - globalHeaderHeight.value - extraOffset
+
+    if (adjustY > maxScrollable) {
+      adjustY = maxScrollable
+    }
+
+    window.scrollTo({
+      top: adjustY,
+      behavior: 'auto',
+    })
+  }, 180)
 }
 
 /* 다음 버튼 */
@@ -103,51 +139,77 @@ const openNext = async currentIndex => {
 </script>
 
 <style scoped>
+/* 페이지 */
 .terms-page {
+  margin-top: 64px;
   padding-bottom: 200px;
 }
 
-/* SECTION */
-.acc-section {
+/* item */
+.acc-item {
   border-bottom: 1px solid #eee;
 }
 
-/* ==== STICKY HEADER (실제 헤더) ==== */
+/* sticky header */
 .acc-header {
   position: sticky;
   top: var(--sticky-top);
-  z-index: 10;
+  z-index: 20;
   background: #fff;
   padding: 16px;
-  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  cursor: pointer;
-  transition:
-    box-shadow 0.25s ease,
-    background 0.25s ease;
+  transition: box-shadow 0.25s ease;
+}
+.acc-header.active {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.acc-header.is-open {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-}
-
-/* 체크박스 + 제목 */
+/* 제목 + 아이콘 */
 .agree-label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  cursor: pointer;
 }
-input[type='checkbox'] {
-  width: 20px;
-  height: 20px;
-}
-.agree-title {
+
+.acc-title {
   font-weight: 600;
 }
 
-/* 아이콘 */
+/* 체크 아이콘 */
+.check-icon {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #555;
+  border-radius: 50%;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.check-icon.checked {
+  background: #0ab;
+  border-color: #0ab;
+}
+
+.check-icon.checked::after {
+  content: '✔';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* 우측 토글 아이콘 */
+.acc-toggle {
+  padding: 8px;
+  cursor: pointer;
+}
+
 .acc-icon {
   width: 16px;
   height: 16px;
@@ -155,34 +217,37 @@ input[type='checkbox'] {
   border-radius: 2px;
   transition: transform 0.25s ease;
 }
-.acc-icon.active {
+
+.acc-icon.open {
   transform: rotate(45deg);
 }
 
-/* CONTENT */
-.acc-content {
+/* body */
+.acc-body {
   overflow: hidden;
-  background: #fff;
 }
+
 .acc-inner {
   padding: 16px;
 }
 
-/* Animation */
+/* transition */
 .acc-enter-from,
 .acc-leave-to {
   max-height: 0;
   opacity: 0;
 }
+
 .acc-enter-active,
 .acc-leave-active {
   transition:
-    max-height 0.3s ease,
-    opacity 0.3s ease;
+    max-height 0.25s ease,
+    opacity 0.25s ease;
 }
+
 .acc-enter-to,
 .acc-leave-from {
-  max-height: 800px;
+  max-height: 600px;
   opacity: 1;
 }
 </style>

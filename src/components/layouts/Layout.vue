@@ -21,6 +21,8 @@ import { RouterView } from 'vue-router'
 <style scoped>
 .contents {
   flex: 1;
-  height: calc(100vh - 80px);
+  height: 100%;
+  max-height: calc(100vh - 80px);
+  /* overflow-y: auto; */
 }
 </style>
