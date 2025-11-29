@@ -10,7 +10,11 @@
     </template>
   </TableWrap>
   <br />
-  <BaseStickyTable :columns="columns2" :rows="rows2" header-fixed />
+  <BaseStickyTable :columns="columns2" :rows="rows2" header-fixed checkbox>
+    <template #action="{ row }">
+      <button @click="alert(row.name)">보기</button>
+    </template>
+  </BaseStickyTable>
 </template>
 
 <script setup>
