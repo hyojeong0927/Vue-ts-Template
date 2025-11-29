@@ -33,11 +33,11 @@ const className = computed(() => props.className || '')
 
 <style scoped>
 .main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
   width: 100%;
-  min-height: calc(100vh - 80px);
+  height: 100%;
+  max-height: calc(var(--vh) * 100);
+  margin-top: 80px;
+  overflow-y: auto;
   transition: all 0.3s ease-in-out;
 }
 

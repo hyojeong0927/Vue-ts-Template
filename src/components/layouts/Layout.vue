@@ -21,8 +21,6 @@ import { RouterView } from 'vue-router'
 <style scoped>
 .contents {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
+  height: calc(100vh - 80px);
 }
 </style>

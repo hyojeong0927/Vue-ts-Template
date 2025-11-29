@@ -19,6 +19,7 @@ import ModalExample from '@/reference/example/ModalExample.vue'
 import SelectboxExample from '@/reference/example/SelectboxExample.vue'
 import StepExample from '@/reference/example/StepExample.vue'
 import TabsExample from '@/reference/example/TabsExample.vue'
+import TableExample from '@/reference/example/TableExample.vue'
 
 const routes = [
   {
@@ -42,6 +43,7 @@ const routes = [
       { path: 'example/selectbox', name: 'SelectboxExample', component: SelectboxExample },
       { path: 'example/step', name: 'StepExample', component: StepExample },
       { path: 'example/tab', name: 'TabsExample', component: TabsExample },
+      { path: 'example/table', name: 'Table', component: TableExample },
     ],
   },
 ]

@@ -74,6 +74,7 @@ const menuData = [
       { label: 'Selectbox', to: '/example/selectbox' },
       { label: 'Step', to: '/example/step' },
       { label: 'Tab', to: '/example/tab' },
+      { label: 'Table', to: '/example/table' },
     ],
   },
   {
@@ -217,7 +218,9 @@ nav a.active {
     top: 0;
     left: 0;
     width: 100%;
+    height: 80px;
     z-index: 999;
+    box-sizing: border-box;
   }
 
   .menu-toggle {
