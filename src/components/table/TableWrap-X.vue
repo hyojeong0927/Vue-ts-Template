@@ -1,13 +1,12 @@
 <template>
   <div class="table-container" ref="containerRef">
-    <!-- 하나의 스크롤 박스만 존재 -->
-    <div class="scroll-wrapper" ref="scrollWrapper" @scroll="syncScroll">
-      <!-- HEADER (sticky) -->
-      <table class="base-table header-table" ref="theadTable">
+    <!-- 스크롤은 여기 한 군데에서만 발생 -->
+    <div class="table-scroll" ref="scrollRef">
+      <table class="base-table" ref="tableRef">
         <colgroup>
           <col
             v-for="(col, i) in flatColumns"
-            :key="'h-' + i"
+            :key="'col-' + i"
             :style="{
               width: colWidths[i] + 'px',
               minWidth: col.minWidth ? col.minWidth : colWidths[i] + 'px',
@@ -29,38 +28,18 @@
               :rowspan="cell.rowSpan"
               :colspan="cell.colSpan"
             >
-              <span class="cell">{{ cell.label }}</span>
+              {{ cell.label }}
             </th>
           </tr>
         </thead>
-      </table>
-
-      <!-- BODY -->
-      <table class="base-table body-table" ref="tbodyTable">
-        <colgroup>
-          <col
-            v-for="(col, i) in flatColumns"
-            :key="'b-' + i"
-            :style="{
-              width: colWidths[i] + 'px',
-              minWidth: col.minWidth ? col.minWidth : colWidths[i] + 'px',
-              maxWidth: col.maxWidth ? col.maxWidth : colWidths[i] + 'px',
-            }"
-          />
-        </colgroup>
 
         <tbody>
-          <tr
-            v-for="(row, rIndex) in rows"
-            :key="'r-' + rIndex"
-            :class="{ 'row-selected': isRowSelected(rIndex) }"
-            @click="handleRowClick(rIndex)"
-          >
+          <tr v-for="(row, rIndex) in rows" :key="'r-' + rIndex">
             <td
               v-for="col in flatColumns"
               :key="col.key"
               class="td"
-              :class="[col.align ? `align-${col.align}` : '']"
+              :class="col.align ? `align-${col.align}` : ''"
             >
               <!-- RADIO -->
               <template v-if="col.type === 'radio' && radio">
@@ -70,7 +49,6 @@
                   :value="rIndex"
                   v-model="selectedRadio"
                   @change="emitSelectRadio"
-                  @click.stop
                 />
               </template>
 
@@ -81,7 +59,6 @@
                   :value="rIndex"
                   v-model="selectedRows"
                   @change="emitSelect"
-                  @click.stop
                 />
               </template>
 
@@ -100,9 +77,9 @@
                 <slot :name="col.slot" :row="row" :value="row[col.key]" />
               </template>
 
-              <!-- DEFAULT -->
+              <!-- DEFAULT TEXT -->
               <template v-else>
-                <span class="cell">{{ row[col.key] }}</span>
+                {{ row[col.key] }}
               </template>
             </td>
           </tr>
@@ -128,21 +105,19 @@ const props = defineProps({
   radio: { type: Boolean, default: false },
 })
 
-/* -------------------------
-   HEADER 구조 만들기
-------------------------- */
+/* ------------------------------------------
+ * HEADER 구조 생성 (그룹 헤더)
+ * ------------------------------------------ */
 const countLeaf = c => (c.children?.length ? c.children.reduce((s, v) => s + countLeaf(v), 0) : 1)
 
 const getMaxDepth = cols => {
   const depth = c => (c.children?.length ? 1 + Math.max(...c.children.map(depth)) : 1)
-
   return Math.max(...cols.map(depth))
 }
 
 const headerRows = computed(() => {
   const root = props.columns
   const maxDepth = getMaxDepth(root)
-
   const rows = Array.from({ length: maxDepth }, () => [])
   let uid = 0
 
@@ -155,7 +130,6 @@ const headerRows = computed(() => {
       cell.rowSpan = isGroup ? 1 : maxDepth - depth
 
       rows[depth].push(cell)
-
       if (isGroup) walk(col.children, depth + 1)
     })
   }
@@ -164,9 +138,9 @@ const headerRows = computed(() => {
   return rows
 })
 
-/* -------------------------
-   Leaf Columns
-------------------------- */
+/* ------------------------------------------
+ * Leaf Columns (tbody에서 쓸 컬럼)
+ * ------------------------------------------ */
 const flatColumns = computed(() => {
   const list = []
   const walk = cols => {
@@ -179,51 +153,21 @@ const flatColumns = computed(() => {
   return list
 })
 
-/* -------------------------
-   체크박스 / 라디오
-------------------------- */
+/* ------------------------------------------
+ * 체크박스 / 라디오
+ * ------------------------------------------ */
 const selectedRows = ref([])
 const selectedRadio = ref(null)
 
 const emitSelect = () => emit('update:selected', selectedRows.value)
 const emitSelectRadio = () => emit('update:radio', selectedRadio.value)
 
-// 선택 여부 확인
-const isRowSelected = rIndex => {
-  return selectedRows.value.includes(rIndex)
-}
-
-// 행 전체 클릭 시 체크박스 토글
-const handleRowClick = rIndex => {
-  if (!props.checkbox) return
-
-  const idx = selectedRows.value.indexOf(rIndex)
-  if (idx > -1) {
-    // 이미 선택되어 있으면 제거
-    selectedRows.value.splice(idx, 1)
-  } else {
-    // 새로 선택
-    selectedRows.value.push(rIndex)
-  }
-  emitSelect()
-}
-
-/* -------------------------
-   Scroll Sync
-------------------------- */
-const scrollWrapper = ref(null)
-const syncScroll = () => {
-  const wrapper = scrollWrapper.value
-  const header = theadTable.value
-  header.style.transform = `translateX(${wrapper.scrollLeft}px)`
-}
-
-/* -------------------------
-   Width 계산 (tbody 기준)
-------------------------- */
+/* ------------------------------------------
+ * Width 측정 (tbody 기준)
+ * ------------------------------------------ */
 const containerRef = ref(null)
-const theadTable = ref(null)
-const tbodyTable = ref(null)
+const scrollRef = ref(null)
+const tableRef = ref(null)
 
 const colWidths = ref([])
 
@@ -232,18 +176,25 @@ const measureColWidths = async () => {
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      const firstRow = tbodyTable.value?.querySelector('tbody tr')
-      if (!firstRow) return
+      const firstRow = tableRef.value?.querySelector('tbody tr')
+
+      if (!firstRow) {
+        // rows가 없을 때: width / minWidth 기본값 사용
+        colWidths.value = flatColumns.value.map(col => {
+          if (col.width) return parseInt(col.width)
+          if (col.minWidth) return parseInt(col.minWidth)
+          return 80
+        })
+        return
+      }
 
       const bodyWidths = Array.from(firstRow.children).map(td => td.getBoundingClientRect().width)
 
       const finalWidths = flatColumns.value.map((col, i) => {
         let w = bodyWidths[i] || 80
-
         if (col.width) w = parseInt(col.width)
         if (col.minWidth) w = Math.max(w, parseInt(col.minWidth))
         if (col.maxWidth) w = Math.min(w, parseInt(col.maxWidth))
-
         return w
       })
 
@@ -252,9 +203,9 @@ const measureColWidths = async () => {
   })
 }
 
-/* -------------------------
-   Lifecycle
-------------------------- */
+/* ------------------------------------------
+ * Lifecycle
+ * ------------------------------------------ */
 let resizeObserver = null
 
 onMounted(() => {
@@ -297,22 +248,14 @@ watch(
   overflow: hidden;
 }
 
-/* 단일 scroll wrapper */
-.scroll-wrapper {
-  overflow-x: auto;
-  overflow-y: auto;
+/* 스크롤은 여기서만 발생 */
+.table-scroll {
   max-height: 360px;
+  overflow-y: auto;
+  overflow-x: auto;
 }
 
-/* sticky header */
-.header-table {
-  position: sticky;
-  top: 0;
-  background: #fff;
-  z-index: 10;
-}
-
-/* 테이블 공통 */
+/* 하나의 테이블에 sticky header 적용 */
 .base-table {
   table-layout: fixed;
   width: max-content;
@@ -320,7 +263,15 @@ watch(
   border-collapse: collapse;
 }
 
-/* group header style */
+/* sticky header: 세로만 고정, 가로는 같이 스크롤 */
+.base-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #fff;
+}
+
+/* 그룹 헤더 스타일 */
 .group-header {
   background: #f8f8f8;
   font-weight: 600;
@@ -338,27 +289,17 @@ watch(
   text-align: right;
 }
 
-/* 셀 공통 */
+/* 셀 공통 스타일 */
 .th,
 .td {
-  .cell {
-    display: block;
-    padding: 12px 12px;
-  }
-
+  padding: 12px;
   border-bottom: 1px solid #eee;
-  border-left: 1px solid #ddd;
+  border-right: 1px solid #ddd;
   white-space: nowrap;
   background: #fff;
-  text-overflow: ellipsis;
   overflow: hidden;
+  text-overflow: ellipsis;
   box-sizing: border-box;
-}
-.row-selected td {
-  background: #f0f7ff;
-}
-.row-selected .td {
-  font-weight: 600;
 }
 
 /* no data */
