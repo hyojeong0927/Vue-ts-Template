@@ -1,8 +1,19 @@
 <template>
   <div class="table-wrapper">
-    <!-- SCROLL BODY -->
+    <!-- Scroll Area -->
     <div class="scroll-body" ref="scrollBody" @scroll="syncScroll">
       <table class="base-table">
+        <!-- 컬럼 폭 지정용 colgroup (width 지정 시 사용) -->
+        <colgroup>
+          <col
+            v-for="(col, i) in flatColumns"
+            :key="'col-' + i"
+            :style="{
+              width: col.width || 'auto',
+            }"
+          />
+        </colgroup>
+
         <!-- HEADER -->
         <thead>
           <tr v-for="(row, rIndex) in headerRows" :key="'hr-' + rIndex">
@@ -15,10 +26,11 @@
               :class="[
                 cell.isGroup ? 'group-header' : 'leaf-header',
                 cell.groupKey ? `group-${cell.groupKey}` : '',
-                cell.isGroup ? `group-depth-${cell.depth}` : '',
+                cell.depth !== undefined ? `group-depth-${cell.depth}` : '',
+                cell.align ? `align-${cell.align}` : '',
               ]"
             >
-              {{ cell.label }}
+              <span class="cell">{{ cell.label }}</span>
             </th>
           </tr>
         </thead>
@@ -77,20 +89,25 @@
 
               <!-- DEFAULT -->
               <template v-else>
-                {{ row[col.key] }}
+                <span class="cell">{{ row[col.key] }}</span>
               </template>
             </td>
+          </tr>
+
+          <!-- no data -->
+          <tr v-if="rows.length === 0">
+            <td :colspan="flatColumns.length" class="no-data">데이터가 없습니다.</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Horizontal Scrollbar -->
+    <!-- Custom Horizontal Scrollbar (scroll-body 밖) -->
     <div class="scrollbar-horizontal" @mousedown="startHorizontalDrag">
       <div class="scrollbar-thumb-horizontal" ref="thumbX"></div>
     </div>
 
-    <!-- Vertical Scrollbar -->
+    <!-- Custom Vertical Scrollbar -->
     <div class="scrollbar-vertical" @mousedown="startVerticalDrag">
       <div class="scrollbar-thumb-vertical" ref="thumbY"></div>
     </div>
@@ -103,16 +120,15 @@ import { ref, computed, onMounted } from 'vue'
 const emit = defineEmits(['update:radio', 'update:checkbox'])
 
 const props = defineProps({
-  columns: Array,
-  rows: Array,
+  columns: { type: Array, required: true },
+  rows: { type: Array, required: true },
   checkbox: { type: Boolean, default: false },
   radio: { type: Boolean, default: false },
 })
 
-/* -----------------------------
-        HEADER GROUP 계산
------------------------------- */
-
+/* ---------------------------
+      HEADER GROUP 계산
+---------------------------- */
 const countLeaf = c => (c.children?.length ? c.children.reduce((s, v) => s + countLeaf(v), 0) : 1)
 
 const getMaxDepth = cols => {
@@ -124,27 +140,40 @@ const headerRows = computed(() => {
   const rows = Array.from({ length: getMaxDepth(props.columns) }, () => [])
   let uid = 0
 
-  const walk = (cols, depth, parentKey = null) => {
+  /**
+   * cols: 현재 레벨 컬럼 배열
+   * depth: 현재 헤더 행 인덱스(0 = 맨 위)
+   * parentGroupKey: 상위 그룹 key (leaf 에 내려줄 값)
+   */
+  const walk = (cols, depth, parentGroupKey = null) => {
     cols.forEach(col => {
+      const isGroup = !!col.children
+      const groupKey = isGroup ? col.key : parentGroupKey
+
       const cell = {
         ...col,
         _id: uid++,
-        isGroup: !!col.children,
-        colSpan: col.children ? countLeaf(col) : 1,
-        rowSpan: col.children ? 1 : rows.length - depth,
-        depth,
-        groupKey: parentKey,
+        isGroup,
+        colSpan: isGroup ? countLeaf(col) : 1,
+        rowSpan: isGroup ? 1 : rows.length - depth,
+        depth, // depth 클래스용
+        groupKey, // group-userInfo 같은 클래스용
       }
+
       rows[depth].push(cell)
 
-      if (col.children) walk(col.children, depth + 1, col.key)
+      if (isGroup) {
+        // 자식들은 이 그룹의 key 를 parentGroupKey 로 받는다
+        walk(col.children, depth + 1, col.key)
+      }
     })
   }
 
-  walk(props.columns, 0)
+  walk(props.columns, 0, null)
   return rows
 })
 
+/* leaf columns (body / colgroup 에 사용) */
 const flatColumns = computed(() => {
   const list = []
   const walk = cols => {
@@ -157,10 +186,9 @@ const flatColumns = computed(() => {
   return list
 })
 
-/* -----------------------------
-      체크박스 / 라디오
------------------------------- */
-
+/* ---------------------------
+      CHECKBOX / RADIO
+---------------------------- */
 const selectedRows = ref([])
 const selectedRadio = ref(null)
 
@@ -177,9 +205,9 @@ const toggleRow = idx => {
 const emitCheck = () => emit('update:checkbox', selectedRows.value)
 const emitRadio = () => emit('update:radio', selectedRadio.value)
 
-/* -----------------------------
-      CUSTOM SCROLLBAR
------------------------------- */
+/* ---------------------------
+   커스텀 스크롤바 (세로/가로)
+---------------------------- */
 
 const scrollBody = ref(null)
 const thumbX = ref(null)
@@ -190,13 +218,23 @@ const syncScroll = () => {
   updateHorizontalThumb()
 }
 
-/* --- Vertical --- */
+/* ----- Y bar ----- */
 const updateVerticalThumb = () => {
   const body = scrollBody.value
   const thumb = thumbY.value
+  if (!body || !thumb) return
+
+  const maxScroll = body.scrollHeight - body.clientHeight
+  if (maxScroll <= 0) {
+    thumb.style.height = '0'
+    thumb.style.top = '0'
+    return
+  }
+
   const ratio = body.clientHeight / body.scrollHeight
   thumb.style.height = `${ratio * 100}%`
-  const scrollRatio = body.scrollTop / (body.scrollHeight - body.clientHeight)
+
+  const scrollRatio = body.scrollTop / maxScroll
   thumb.style.top = `${scrollRatio * (body.clientHeight - thumb.offsetHeight)}px`
 }
 
@@ -205,7 +243,7 @@ let startY = 0
 let startScrollTop = 0
 
 const startVerticalDrag = e => {
-  if (!thumbY.value.contains(e.target)) return
+  if (!thumbY.value || !thumbY.value.contains(e.target)) return
   draggingY = true
   startY = e.clientY
   startScrollTop = scrollBody.value.scrollTop
@@ -217,10 +255,13 @@ const onVerticalDrag = e => {
   if (!draggingY) return
   const body = scrollBody.value
   const thumb = thumbY.value
-  const delta = e.clientY - startY
   const maxThumb = body.clientHeight - thumb.offsetHeight
   const maxScroll = body.scrollHeight - body.clientHeight
-  body.scrollTop = startScrollTop + (delta / maxThumb) * maxScroll
+  if (maxThumb <= 0 || maxScroll <= 0) return
+
+  const delta = e.clientY - startY
+  const scrollDelta = (delta / maxThumb) * maxScroll
+  body.scrollTop = startScrollTop + scrollDelta
 }
 
 const stopVerticalDrag = () => {
@@ -229,13 +270,23 @@ const stopVerticalDrag = () => {
   document.removeEventListener('mouseup', stopVerticalDrag)
 }
 
-/* --- Horizontal --- */
+/* ----- X bar ----- */
 const updateHorizontalThumb = () => {
   const body = scrollBody.value
   const thumb = thumbX.value
+  if (!body || !thumb) return
+
+  const maxScroll = body.scrollWidth - body.clientWidth
+  if (maxScroll <= 0) {
+    thumb.style.width = '0'
+    thumb.style.left = '0'
+    return
+  }
+
   const ratio = body.clientWidth / body.scrollWidth
   thumb.style.width = `${ratio * 100}%`
-  const scrollRatio = body.scrollLeft / (body.scrollWidth - body.clientWidth)
+
+  const scrollRatio = body.scrollLeft / maxScroll
   thumb.style.left = `${scrollRatio * (body.clientWidth - thumb.offsetWidth)}px`
 }
 
@@ -244,7 +295,7 @@ let startX = 0
 let startScrollLeft = 0
 
 const startHorizontalDrag = e => {
-  if (!thumbX.value.contains(e.target)) return
+  if (!thumbX.value || !thumbX.value.contains(e.target)) return
   draggingX = true
   startX = e.clientX
   startScrollLeft = scrollBody.value.scrollLeft
@@ -257,10 +308,13 @@ const onHorizontalDrag = e => {
   if (!draggingX) return
   const body = scrollBody.value
   const thumb = thumbX.value
-  const delta = e.clientX - startX
   const maxThumb = body.clientWidth - thumb.offsetWidth
   const maxScroll = body.scrollWidth - body.clientWidth
-  body.scrollLeft = startScrollLeft + (delta / maxThumb) * maxScroll
+  if (maxThumb <= 0 || maxScroll <= 0) return
+
+  const delta = e.clientX - startX
+  const scrollDelta = (delta / maxThumb) * maxScroll
+  body.scrollLeft = startScrollLeft + scrollDelta
 }
 
 const stopHorizontalDrag = () => {
@@ -281,7 +335,7 @@ onMounted(() => {
   border: 1px solid #ddd;
 }
 
-/* Scroll area */
+/* scroll area */
 .scroll-body {
   max-height: 300px;
   overflow: auto;
@@ -294,22 +348,24 @@ onMounted(() => {
   display: none;
 }
 
-/* Horizontal bar */
+/* horizontal bar outside */
 .scrollbar-horizontal {
   position: absolute;
   bottom: 0;
   left: 0;
-  right: 8px;
+  right: 8px; /* vertical bar 공간 */
   height: 10px;
 }
+
 .scrollbar-thumb-horizontal {
   position: absolute;
   height: 10px;
   background: #b5b5b5;
   border-radius: 4px;
+  cursor: pointer;
 }
 
-/* Vertical bar */
+/* vertical bar */
 .scrollbar-vertical {
   position: absolute;
   top: 0;
@@ -317,6 +373,7 @@ onMounted(() => {
   width: 8px;
   height: 100%;
 }
+
 .scrollbar-thumb-vertical {
   position: absolute;
   width: 8px;
@@ -324,22 +381,27 @@ onMounted(() => {
   border-radius: 4px;
 }
 
-/* TABLE */
+/* table */
 .base-table {
   width: max-content !important;
   min-width: max-content !important;
   border-collapse: collapse;
 }
 
-/* Sticky header */
-thead th {
+thead {
   position: sticky;
   top: 0;
   background: #fff;
   z-index: 20;
 }
 
-/* Align */
+.cell {
+  display: block;
+  padding: 10px;
+  white-space: nowrap;
+}
+
+/* align classes */
 .align-left {
   text-align: left;
 }
@@ -350,10 +412,8 @@ thead th {
   text-align: right;
 }
 
-/* Base cell */
 .th,
 .td {
-  padding: 10px;
   border: 1px solid #eee;
   white-space: nowrap;
 }
@@ -362,5 +422,20 @@ thead th {
 .row-selected td {
   background: #f0f7ff;
   font-weight: 600;
+}
+
+/* 예시: group / depth 별 스타일 주고 싶으면 이런 식으로 */
+.group-userInfo {
+  /* 예: 사용자 정보 그룹 아래 leaf header 배경 */
+  background: #f9fbff;
+}
+
+.group-depth-0 {
+  /* 최상단 그룹 */
+  background: #f5f5f5;
+}
+
+.group-depth-1 {
+  /* 2단계 그룹/leaf */
 }
 </style>
