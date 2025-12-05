@@ -1,51 +1,49 @@
 <template>
   <div class="table-container" ref="containerRef">
-    <!-- 하나의 스크롤 박스만 존재 -->
-    <div class="scroll-wrapper" ref="scrollWrapper" @scroll="syncScroll">
-      <!-- HEADER (sticky) -->
-      <table class="base-table header-table" ref="theadTable">
-        <colgroup>
-          <col
-            v-for="(col, i) in flatColumns"
-            :key="'h-' + i"
-            :style="{
-              width: colWidths[i] + 'px',
-              minWidth: col.minWidth ? col.minWidth : colWidths[i] + 'px',
-              maxWidth: col.maxWidth ? col.maxWidth : colWidths[i] + 'px',
-            }"
-          />
-        </colgroup>
+    <!-- HEADER (스크롤 밖, sticky) -->
+    <table class="base-table header-table" ref="theadTable">
+      <colgroup>
+        <col
+          v-for="(col, i) in flatColumns"
+          :key="'h-' + i"
+          :style="{ width: colWidths[i] + 'px' }"
+        />
+      </colgroup>
 
-        <thead>
-          <tr v-for="(row, rIndex) in headerRows" :key="'hr-' + rIndex">
-            <th
-              v-for="cell in row"
-              :key="cell._id"
-              class="th"
-              :class="[
-                cell.children?.length ? 'group-header' : '',
-                cell.align ? `align-${cell.align}` : '',
-              ]"
-              :rowspan="cell.rowSpan"
-              :colspan="cell.colSpan"
-            >
-              <span class="cell">{{ cell.label }}</span>
-            </th>
-          </tr>
-        </thead>
-      </table>
+      <thead>
+        <tr v-for="(row, rIndex) in headerRows" :key="'hr-' + rIndex">
+          <th
+            v-for="cell in row"
+            :key="cell._id"
+            class="th"
+            :rowspan="cell.rowSpan"
+            :colspan="cell.colSpan"
+            :class="[
+              cell.children?.length ? 'group-header' : '',
+              cell.align ? `align-${cell.align}` : '',
+              cell.isGroup ? 'group-header' : 'leaf-header',
+              cell.parentKey ? `group-${cell.parentKey}` : '',
+            ]"
+          >
+            <span class="cell">{{ cell.label }}</span>
+          </th>
+        </tr>
+      </thead>
+    </table>
 
-      <!-- BODY -->
+    <!-- BODY (스크롤되는 영역) -->
+    <div
+      class="scroll-body"
+      ref="scrollWrapper"
+      @scroll="syncScrollX"
+      :class="{ 'force-x-scroll': forceHorizontalScroll }"
+    >
       <table class="base-table body-table" ref="tbodyTable">
         <colgroup>
           <col
             v-for="(col, i) in flatColumns"
             :key="'b-' + i"
-            :style="{
-              width: colWidths[i] + 'px',
-              minWidth: col.minWidth ? col.minWidth : colWidths[i] + 'px',
-              maxWidth: col.maxWidth ? col.maxWidth : colWidths[i] + 'px',
-            }"
+            :style="{ width: colWidths[i] + 'px' }"
           />
         </colgroup>
 
@@ -85,12 +83,12 @@
                 />
               </template>
 
-              <!-- EMAIL -->
+              <!-- 이메일 -->
               <template v-else-if="col.type === 'email'">
                 <a :href="`mailto:${row[col.key]}`">{{ row[col.key] }}</a>
               </template>
 
-              <!-- LINK -->
+              <!-- 링크 -->
               <template v-else-if="col.type === 'link'">
                 <a :href="row[col.key]" target="_blank">{{ row[col.key] }}</a>
               </template>
@@ -100,13 +98,14 @@
                 <slot :name="col.slot" :row="row" :value="row[col.key]" />
               </template>
 
-              <!-- DEFAULT -->
+              <!-- 기본 -->
               <template v-else>
                 <span class="cell">{{ row[col.key] }}</span>
               </template>
             </td>
           </tr>
 
+          <!-- 데이터 없음 -->
           <tr v-if="rows.length === 0">
             <td :colspan="flatColumns.length" class="no-data">데이터가 없습니다.</td>
           </tr>
@@ -126,46 +125,44 @@ const props = defineProps({
   rows: { type: Array, required: true },
   checkbox: { type: Boolean, default: false },
   radio: { type: Boolean, default: false },
+  forceHorizontalScroll: { type: Boolean, default: false },
 })
 
 /* -------------------------
-   HEADER 구조 만들기
+   HEADER GROUP 구조 계산
 ------------------------- */
 const countLeaf = c => (c.children?.length ? c.children.reduce((s, v) => s + countLeaf(v), 0) : 1)
 
 const getMaxDepth = cols => {
   const depth = c => (c.children?.length ? 1 + Math.max(...c.children.map(depth)) : 1)
-
   return Math.max(...cols.map(depth))
 }
 
 const headerRows = computed(() => {
-  const root = props.columns
-  const maxDepth = getMaxDepth(root)
-
+  const maxDepth = getMaxDepth(props.columns)
   const rows = Array.from({ length: maxDepth }, () => [])
   let uid = 0
 
-  const walk = (cols, depth) => {
+  const walk = (cols, depth, parentKey = null) => {
     cols.forEach(col => {
       const isGroup = col.children?.length
-      const cell = { ...col, _id: uid++ }
+      const cell = { ...col, _id: uid++, parentKey, isGroup }
 
       cell.colSpan = isGroup ? countLeaf(col) : 1
       cell.rowSpan = isGroup ? 1 : maxDepth - depth
 
       rows[depth].push(cell)
 
-      if (isGroup) walk(col.children, depth + 1)
+      if (isGroup) walk(col.children, depth + 1, col.key)
     })
   }
 
-  walk(root, 0)
+  walk(props.columns, 0)
   return rows
 })
 
 /* -------------------------
-   Leaf Columns
+   leaf columns
 ------------------------- */
 const flatColumns = computed(() => {
   const list = []
@@ -180,7 +177,7 @@ const flatColumns = computed(() => {
 })
 
 /* -------------------------
-   체크박스 / 라디오
+   선택 기능
 ------------------------- */
 const selectedRows = ref([])
 const selectedRadio = ref(null)
@@ -188,82 +185,100 @@ const selectedRadio = ref(null)
 const emitSelect = () => emit('update:selected', selectedRows.value)
 const emitSelectRadio = () => emit('update:radio', selectedRadio.value)
 
-// 선택 여부 확인
-const isRowSelected = rIndex => {
-  return selectedRows.value.includes(rIndex)
-}
+const isRowSelected = index => selectedRows.value.includes(index)
 
-// 행 전체 클릭 시 체크박스 토글
-const handleRowClick = rIndex => {
+const handleRowClick = index => {
   if (!props.checkbox) return
 
-  const idx = selectedRows.value.indexOf(rIndex)
-  if (idx > -1) {
-    // 이미 선택되어 있으면 제거
-    selectedRows.value.splice(idx, 1)
-  } else {
-    // 새로 선택
-    selectedRows.value.push(rIndex)
-  }
+  const i = selectedRows.value.indexOf(index)
+  if (i > -1) selectedRows.value.splice(i, 1)
+  else selectedRows.value.push(index)
+
   emitSelect()
 }
 
 /* -------------------------
-   Scroll Sync
+   DOM refs
 ------------------------- */
-const scrollWrapper = ref(null)
-const syncScroll = () => {
-  const wrapper = scrollWrapper.value
-  const header = theadTable.value
-  header.style.transform = `translateX(${wrapper.scrollLeft}px)`
-}
-
-/* -------------------------
-   Width 계산 (tbody 기준)
-------------------------- */
-const containerRef = ref(null)
-const theadTable = ref(null)
 const tbodyTable = ref(null)
+const theadTable = ref(null)
+const scrollWrapper = ref(null)
 
 const colWidths = ref([])
 
+/* -------------------------
+   HEADER WIDTH 동기화 (핵심)
+------------------------- */
+const syncHeaderWidth = () => {
+  const bodyWidth = tbodyTable.value?.offsetWidth || 0
+  if (bodyWidth > 0) {
+    theadTable.value.style.width = bodyWidth + 'px'
+  }
+}
+
+/* -------------------------
+   WIDTH 계산 (정수 픽셀 + 3프레임 안정화)
+------------------------- */
 const measureColWidths = async () => {
   await nextTick()
 
-  requestAnimationFrame(() => {
+  return new Promise(resolve => {
     requestAnimationFrame(() => {
-      const firstRow = tbodyTable.value?.querySelector('tbody tr')
-      if (!firstRow) return
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const firstRow = tbodyTable.value?.querySelector('tbody tr')
+          if (!firstRow) {
+            resolve()
+            return
+          }
 
-      const bodyWidths = Array.from(firstRow.children).map(td => td.getBoundingClientRect().width)
+          const widths = Array.from(firstRow.children).map(td =>
+            Math.round(td.getBoundingClientRect().width)
+          )
 
-      const finalWidths = flatColumns.value.map((col, i) => {
-        let w = bodyWidths[i] || 80
+          colWidths.value = widths.map((w, i) => {
+            const col = flatColumns.value[i]
+            let width = w
 
-        if (col.width) w = parseInt(col.width)
-        if (col.minWidth) w = Math.max(w, parseInt(col.minWidth))
-        if (col.maxWidth) w = Math.min(w, parseInt(col.maxWidth))
+            if (col.width) width = Math.round(parseInt(col.width))
+            if (col.minWidth) width = Math.max(width, Math.round(parseInt(col.minWidth)))
+            if (col.maxWidth) width = Math.min(width, Math.round(parseInt(col.maxWidth)))
 
-        return w
+            return Math.round(width)
+          })
+
+          resolve()
+        })
       })
-
-      colWidths.value = finalWidths
     })
   })
 }
 
 /* -------------------------
-   Lifecycle
+   SCROLL X 동기화
+------------------------- */
+const syncScrollX = () => {
+  const x = Math.round(scrollWrapper.value.scrollLeft)
+  theadTable.value.style.transform = `translateX(-${x}px)`
+}
+
+/* -------------------------
+   LIFECYCLE
 ------------------------- */
 let resizeObserver = null
 
-onMounted(() => {
-  measureColWidths()
+onMounted(async () => {
+  await measureColWidths()
+  syncHeaderWidth()
 
-  resizeObserver = new ResizeObserver(() => measureColWidths())
-  resizeObserver.observe(containerRef.value)
+  resizeObserver = new ResizeObserver(() => {
+    measureColWidths().then(syncHeaderWidth)
+  })
+  resizeObserver.observe(tbodyTable.value)
 
-  window.addEventListener('resize', measureColWidths)
+  window.addEventListener('resize', () => {
+    measureColWidths().then(syncHeaderWidth)
+  })
 })
 
 onBeforeUnmount(() => {
@@ -274,9 +289,7 @@ onBeforeUnmount(() => {
 watch(
   () => props.rows,
   () => {
-    selectedRows.value = []
-    selectedRadio.value = null
-    measureColWidths()
+    measureColWidths().then(syncHeaderWidth)
   },
   { deep: true }
 )
@@ -284,7 +297,7 @@ watch(
 watch(
   () => props.columns,
   () => {
-    measureColWidths()
+    measureColWidths().then(syncHeaderWidth)
   },
   { deep: true }
 )
@@ -297,30 +310,38 @@ watch(
   overflow: hidden;
 }
 
-/* 단일 scroll wrapper */
-.scroll-wrapper {
-  overflow-x: auto;
-  overflow-y: auto;
-  max-height: 360px;
-}
-
-/* sticky header */
+/* HEADER 고정 */
 .header-table {
   position: sticky;
   top: 0;
+  z-index: 20;
   background: #fff;
-  z-index: 10;
+
+  /* 흔들림 방지 */
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
-/* 테이블 공통 */
+/* BODY 스크롤 */
+.scroll-body {
+  max-height: 360px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+.force-x-scroll table {
+  min-width: calc(100% + 1px); /* 항상 가로 스크롤 생성 */
+}
+/* TABLE 공통 */
 .base-table {
-  table-layout: fixed;
   width: max-content;
   min-width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
+  transform: translateZ(0); /* fractional pixel jitter 방지 */
 }
 
-/* group header style */
+/* 그룹 헤더 */
 .group-header {
   background: #f8f8f8;
   font-weight: 600;
@@ -338,26 +359,26 @@ watch(
   text-align: right;
 }
 
-/* 셀 공통 */
+/* 셀 */
 .th,
 .td {
-  .cell {
-    display: block;
-    padding: 12px 12px;
-  }
-
   border-bottom: 1px solid #eee;
   border-left: 1px solid #ddd;
   white-space: nowrap;
   background: #fff;
-  text-overflow: ellipsis;
-  overflow: hidden;
   box-sizing: border-box;
 }
+
+.cell {
+  display: block;
+  padding: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 선택된 row */
 .row-selected td {
   background: #f0f7ff;
-}
-.row-selected .td {
   font-weight: 600;
 }
 

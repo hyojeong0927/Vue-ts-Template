@@ -1,5 +1,5 @@
 <template>
-  <TableWrap :columns="columns" :rows="rows" checkbox radio>
+  <TableWrap :columns="columns" :rows="rows" checkbox radio :forceHorizontalScroll="true">
     <template #memoSlot="{ row }">
       <input v-model="row.memo" placeholder="메모 입력" />
     </template>
@@ -8,15 +8,13 @@
       <button @click="alert(row.name)">보기</button>
     </template>
   </TableWrap>
-  <TableWrapX :columns="columns" :rows="rows" checkbox radio></TableWrapX>
 </template>
 
 <script setup>
-import TableWrap from '../../components/table/TableWrap.vue'
-import TableWrapX from '@/components/table/TableWrap-X.vue'
+import TableWrap from '../../components/table/TableWrap-X.vue'
 
 const columns = [
-  { key: '_radio', label: '', type: 'radio', align: 'center', width: '40px' },
+  // { key: '_radio', label: '', type: 'radio', align: 'center', width: '40px' },
   {
     key: '_checkbox',
     label: '',
@@ -25,21 +23,57 @@ const columns = [
     width: '40px',
   },
   {
+    key: 'groupInfo',
     label: '그룹 정보',
     children: [
-      { key: 'field01', label: '그룹1', align: 'center', minWidth: '80px' },
-      { key: 'field05', label: '그룹2', align: 'center', minWidth: '80px' },
+      { key: 'field01', label: '그룹1', align: 'center', width: '80px' },
+      { key: 'field05', label: '그룹2', align: 'center', width: '80px' },
     ],
   },
   {
+    key: 'userInfo',
     label: '사용자 정보',
     children: [
       { key: 'name', label: '이름', align: 'left', width: '120px' },
-      { key: 'email', label: '메일', type: 'email', align: 'center', minWidth: '140px' },
-      { key: 'position', label: '직책', align: 'left', minWidth: '100px' },
+      { key: 'email', label: '메일', type: 'email', align: 'center', width: '140px' },
+      { key: 'position', label: '직책', align: 'left', width: '100px' },
     ],
   },
-  { key: 'memo', label: '메모', slot: 'memoSlot', minWidth: '100px' },
+  { key: 'memo', label: '메모', slot: 'memoSlot', width: '200px' },
+  { key: 'action', label: '관리', slot: 'action', align: 'center', width: '80px' },
+  { key: 'memo', label: '메모', slot: 'memoSlot', width: '200px' },
+  { key: 'action', label: '관리', slot: 'action', align: 'center', width: '80px' },
+  { key: 'memo', label: '메모', slot: 'memoSlot', width: '100px' },
+  { key: 'action', label: '관리', slot: 'action', align: 'center', width: '80px' },
+  { key: 'memo', label: '메모', slot: 'memoSlot', width: '200px' },
+  { key: 'action', label: '관리', slot: 'action', align: 'center', width: '80px' },
+  { key: 'memo', label: '메모', slot: 'memoSlot', width: '100px' },
+  { key: 'action', label: '관리', slot: 'action', align: 'center', width: '80px' },
+  { key: 'memo', label: '메모', slot: 'memoSlot', width: '100px' },
+  { key: 'action', label: '관리', slot: 'action', align: 'center', width: '80px' },
+  { key: 'memo', label: '메모', slot: 'memoSlot', width: '100px' },
+  { key: 'action', label: '관리', slot: 'action', align: 'center', width: '80px' },
+  { key: 'memo', label: '메모', slot: 'memoSlot', width: '100px' },
+  { key: 'action', label: '관리', slot: 'action', align: 'center', width: '80px' },
+  { key: 'memo', label: '메모', slot: 'memoSlot', width: '100px' },
+  { key: 'action', label: '관리', slot: 'action', align: 'center', width: '80px' },
+  { key: 'memo', label: '메모', slot: 'memoSlot', width: '200px' },
+  { key: 'action', label: '관리', slot: 'action', align: 'center', width: '80px' },
+  { key: 'memo', label: '메모', slot: 'memoSlot', width: '200px' },
+  { key: 'action', label: '관리', slot: 'action', align: 'center', width: '80px' },
+  { key: 'memo', label: '메모', slot: 'memoSlot', width: '100px' },
+  { key: 'action', label: '관리', slot: 'action', align: 'center', width: '80px' },
+  { key: 'memo', label: '메모', slot: 'memoSlot', width: '200px' },
+  { key: 'action', label: '관리', slot: 'action', align: 'center', width: '80px' },
+  { key: 'memo', label: '메모', slot: 'memoSlot', width: '100px' },
+  { key: 'action', label: '관리', slot: 'action', align: 'center', width: '80px' },
+  { key: 'memo', label: '메모', slot: 'memoSlot', width: '100px' },
+  { key: 'action', label: '관리', slot: 'action', align: 'center', width: '80px' },
+  { key: 'memo', label: '메모', slot: 'memoSlot', width: '100px' },
+  { key: 'action', label: '관리', slot: 'action', align: 'center', width: '80px' },
+  { key: 'memo', label: '메모', slot: 'memoSlot', width: '100px' },
+  { key: 'action', label: '관리', slot: 'action', align: 'center', width: '80px' },
+  { key: 'memo', label: '메모', slot: 'memoSlot', width: '100px' },
   { key: 'action', label: '관리', slot: 'action', align: 'center', width: '80px' },
 ]
 

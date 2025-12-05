@@ -1,113 +1,55 @@
 <template>
-  <div class="table-container" ref="containerRef">
-    <!-- 스크롤은 여기 한 군데에서만 발생 -->
-    <div class="table-scroll" ref="scrollRef">
-      <table class="base-table" ref="tableRef">
-        <colgroup>
-          <col
-            v-for="(col, i) in flatColumns"
-            :key="'col-' + i"
-            :style="{
-              width: colWidths[i] + 'px',
-              minWidth: col.minWidth ? col.minWidth : colWidths[i] + 'px',
-              maxWidth: col.maxWidth ? col.maxWidth : colWidths[i] + 'px',
-            }"
-          />
-        </colgroup>
-
+  <div class="table-wrapper">
+    <!-- table scroll area -->
+    <div class="scroll-body" ref="scrollBody" @scroll="syncScroll">
+      <table class="base-table">
         <thead>
           <tr v-for="(row, rIndex) in headerRows" :key="'hr-' + rIndex">
             <th
               v-for="cell in row"
               :key="cell._id"
-              class="th"
-              :class="[
-                cell.children?.length ? 'group-header' : '',
-                cell.align ? `align-${cell.align}` : '',
-              ]"
               :rowspan="cell.rowSpan"
               :colspan="cell.colSpan"
+              class="th"
+              :class="[cell.isGroup ? 'group-header' : 'leaf-header']"
             >
               {{ cell.label }}
             </th>
           </tr>
         </thead>
-
         <tbody>
-          <tr v-for="(row, rIndex) in rows" :key="'r-' + rIndex">
-            <td
-              v-for="col in flatColumns"
-              :key="col.key"
-              class="td"
-              :class="col.align ? `align-${col.align}` : ''"
-            >
-              <!-- RADIO -->
-              <template v-if="col.type === 'radio' && radio">
-                <input
-                  type="radio"
-                  name="table-radio"
-                  :value="rIndex"
-                  v-model="selectedRadio"
-                  @change="emitSelectRadio"
-                />
-              </template>
-
-              <!-- CHECKBOX -->
-              <template v-else-if="col.type === 'checkbox' && checkbox">
-                <input
-                  type="checkbox"
-                  :value="rIndex"
-                  v-model="selectedRows"
-                  @change="emitSelect"
-                />
-              </template>
-
-              <!-- EMAIL -->
-              <template v-else-if="col.type === 'email'">
-                <a :href="`mailto:${row[col.key]}`">{{ row[col.key] }}</a>
-              </template>
-
-              <!-- LINK -->
-              <template v-else-if="col.type === 'link'">
-                <a :href="row[col.key]" target="_blank">{{ row[col.key] }}</a>
-              </template>
-
-              <!-- SLOT -->
-              <template v-else-if="col.slot">
-                <slot :name="col.slot" :row="row" :value="row[col.key]" />
-              </template>
-
-              <!-- DEFAULT TEXT -->
-              <template v-else>
-                {{ row[col.key] }}
-              </template>
+          <tr v-for="(row, r) in rows" :key="r">
+            <td v-for="col in flatColumns" :key="col.key" class="td">
+              {{ row[col.key] }}
             </td>
-          </tr>
-
-          <tr v-if="rows.length === 0">
-            <td :colspan="flatColumns.length" class="no-data">데이터가 없습니다.</td>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- horizontal scrollbar (scroll-body 바깥에 둠!!) -->
+    <div class="scrollbar-horizontal" @mousedown="startHorizontalDrag">
+      <div class="scrollbar-thumb-horizontal" ref="thumbX"></div>
+    </div>
+
+    <!-- vertical scrollbar -->
+    <div class="scrollbar-vertical" @mousedown="startVerticalDrag">
+      <div class="scrollbar-thumb-vertical" ref="thumbY"></div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue'
-
-const emit = defineEmits(['update:selected', 'update:radio'])
+import { ref, computed, onMounted } from 'vue'
 
 const props = defineProps({
-  columns: { type: Array, required: true },
-  rows: { type: Array, required: true },
-  checkbox: { type: Boolean, default: false },
-  radio: { type: Boolean, default: false },
+  columns: Array,
+  rows: Array,
 })
 
-/* ------------------------------------------
- * HEADER 구조 생성 (그룹 헤더)
- * ------------------------------------------ */
+/* ----------------------------
+   HEADER GROUP 계산
+----------------------------- */
 const countLeaf = c => (c.children?.length ? c.children.reduce((s, v) => s + countLeaf(v), 0) : 1)
 
 const getMaxDepth = cols => {
@@ -116,36 +58,32 @@ const getMaxDepth = cols => {
 }
 
 const headerRows = computed(() => {
-  const root = props.columns
-  const maxDepth = getMaxDepth(root)
-  const rows = Array.from({ length: maxDepth }, () => [])
+  const rows = Array.from({ length: getMaxDepth(props.columns) }, () => [])
   let uid = 0
 
   const walk = (cols, depth) => {
     cols.forEach(col => {
-      const isGroup = col.children?.length
-      const cell = { ...col, _id: uid++ }
-
-      cell.colSpan = isGroup ? countLeaf(col) : 1
-      cell.rowSpan = isGroup ? 1 : maxDepth - depth
-
+      const cell = {
+        ...col,
+        _id: uid++,
+        isGroup: !!col.children,
+        colSpan: col.children ? countLeaf(col) : 1,
+        rowSpan: col.children ? 1 : rows.length - depth,
+      }
       rows[depth].push(cell)
-      if (isGroup) walk(col.children, depth + 1)
+      if (col.children) walk(col.children, depth + 1)
     })
   }
 
-  walk(root, 0)
+  walk(props.columns, 0)
   return rows
 })
 
-/* ------------------------------------------
- * Leaf Columns (tbody에서 쓸 컬럼)
- * ------------------------------------------ */
 const flatColumns = computed(() => {
   const list = []
   const walk = cols => {
     cols.forEach(col => {
-      if (col.children?.length) walk(col.children)
+      if (col.children) walk(col.children)
       else list.push(col)
     })
   }
@@ -153,158 +91,189 @@ const flatColumns = computed(() => {
   return list
 })
 
-/* ------------------------------------------
- * 체크박스 / 라디오
- * ------------------------------------------ */
-const selectedRows = ref([])
-const selectedRadio = ref(null)
+/* ----------------------------
+   스크롤 & 커스텀 바 동기화
+----------------------------- */
 
-const emitSelect = () => emit('update:selected', selectedRows.value)
-const emitSelectRadio = () => emit('update:radio', selectedRadio.value)
+const scrollBody = ref(null)
+const thumbX = ref(null)
+const thumbY = ref(null)
 
-/* ------------------------------------------
- * Width 측정 (tbody 기준)
- * ------------------------------------------ */
-const containerRef = ref(null)
-const scrollRef = ref(null)
-const tableRef = ref(null)
-
-const colWidths = ref([])
-
-const measureColWidths = async () => {
-  await nextTick()
-
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      const firstRow = tableRef.value?.querySelector('tbody tr')
-
-      if (!firstRow) {
-        // rows가 없을 때: width / minWidth 기본값 사용
-        colWidths.value = flatColumns.value.map(col => {
-          if (col.width) return parseInt(col.width)
-          if (col.minWidth) return parseInt(col.minWidth)
-          return 80
-        })
-        return
-      }
-
-      const bodyWidths = Array.from(firstRow.children).map(td => td.getBoundingClientRect().width)
-
-      const finalWidths = flatColumns.value.map((col, i) => {
-        let w = bodyWidths[i] || 80
-        if (col.width) w = parseInt(col.width)
-        if (col.minWidth) w = Math.max(w, parseInt(col.minWidth))
-        if (col.maxWidth) w = Math.min(w, parseInt(col.maxWidth))
-        return w
-      })
-
-      colWidths.value = finalWidths
-    })
-  })
+const syncScroll = () => {
+  updateVerticalThumb()
+  updateHorizontalThumb()
 }
 
-/* ------------------------------------------
- * Lifecycle
- * ------------------------------------------ */
-let resizeObserver = null
+/* -------- 세로 -------- */
+const updateVerticalThumb = () => {
+  const body = scrollBody.value
+  const thumb = thumbY.value
+
+  const ratio = body.clientHeight / body.scrollHeight
+  thumb.style.height = `${ratio * 100}%`
+
+  const scrollRatio = body.scrollTop / (body.scrollHeight - body.clientHeight)
+
+  thumb.style.top = `${scrollRatio * (body.clientHeight - thumb.offsetHeight)}px`
+}
+
+let draggingY = false
+let startY = 0
+let startScrollTop = 0
+
+const startVerticalDrag = e => {
+  if (!thumbY.value.contains(e.target)) return
+  draggingY = true
+  startY = e.clientY
+  startScrollTop = scrollBody.value.scrollTop
+  document.addEventListener('mousemove', onVerticalDrag)
+  document.addEventListener('mouseup', stopVerticalDrag)
+}
+
+const onVerticalDrag = e => {
+  if (!draggingY) return
+  const body = scrollBody.value
+  const thumb = thumbY.value
+
+  const delta = e.clientY - startY
+  const maxThumbMove = body.clientHeight - thumb.offsetHeight
+  const maxScroll = body.scrollHeight - body.clientHeight
+  const scrollDelta = (delta / maxThumbMove) * maxScroll
+
+  body.scrollTop = startScrollTop + scrollDelta
+}
+
+const stopVerticalDrag = () => {
+  draggingY = false
+  document.removeEventListener('mousemove', onVerticalDrag)
+  document.removeEventListener('mouseup', stopVerticalDrag)
+}
+
+/* -------- 가로 -------- */
+const updateHorizontalThumb = () => {
+  const body = scrollBody.value
+  const thumb = thumbX.value
+
+  const ratio = body.clientWidth / body.scrollWidth
+  thumb.style.width = `${ratio * 100}%`
+
+  const scrollRatio = body.scrollLeft / (body.scrollWidth - body.clientWidth)
+
+  thumb.style.left = `${scrollRatio * (body.clientWidth - thumb.offsetWidth)}px`
+}
+
+let draggingX = false
+let startX = 0
+let startScrollLeft = 0
+
+const startHorizontalDrag = e => {
+  if (!thumbX.value.contains(e.target)) return
+  draggingX = true
+  startX = e.clientX
+  startScrollLeft = scrollBody.value.scrollLeft
+
+  document.addEventListener('mousemove', onHorizontalDrag)
+  document.addEventListener('mouseup', stopHorizontalDrag)
+}
+
+const onHorizontalDrag = e => {
+  if (!draggingX) return
+  const body = scrollBody.value
+  const thumb = thumbX.value
+
+  const delta = e.clientX - startX
+  const maxThumbMove = body.clientWidth - thumb.offsetWidth
+  const maxScroll = body.scrollWidth - body.clientWidth
+  const scrollDelta = (delta / maxThumbMove) * maxScroll
+
+  body.scrollLeft = startScrollLeft + scrollDelta
+}
+
+const stopHorizontalDrag = () => {
+  draggingX = false
+  document.removeEventListener('mousemove', onHorizontalDrag)
+  document.removeEventListener('mouseup', stopHorizontalDrag)
+}
 
 onMounted(() => {
-  measureColWidths()
-
-  resizeObserver = new ResizeObserver(() => measureColWidths())
-  resizeObserver.observe(containerRef.value)
-
-  window.addEventListener('resize', measureColWidths)
+  syncScroll()
+  requestAnimationFrame(syncScroll)
 })
-
-onBeforeUnmount(() => {
-  resizeObserver?.disconnect()
-  window.removeEventListener('resize', measureColWidths)
-})
-
-watch(
-  () => props.rows,
-  () => {
-    selectedRows.value = []
-    selectedRadio.value = null
-    measureColWidths()
-  },
-  { deep: true }
-)
-
-watch(
-  () => props.columns,
-  () => {
-    measureColWidths()
-  },
-  { deep: true }
-)
 </script>
-
 <style scoped>
-.table-container {
-  border: 1px solid #ddd;
+.table-wrapper {
   position: relative;
-  overflow: hidden;
+  border: 1px solid #ddd;
 }
 
-/* 스크롤은 여기서만 발생 */
-.table-scroll {
-  max-height: 360px;
-  overflow-y: auto;
-  overflow-x: auto;
+/* scroll area */
+.scroll-body {
+  max-height: 300px;
+  overflow: auto;
+  overflow-x: auto !important;
+
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scroll-body::-webkit-scrollbar {
+  display: none;
 }
 
-/* 하나의 테이블에 sticky header 적용 */
+/* horizontal bar now OUTSIDE scroll-body */
+.scrollbar-horizontal {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 8px; /* vertical bar 공간 */
+  height: 10px;
+  background: transparent;
+}
+
+.scrollbar-thumb-horizontal {
+  position: absolute;
+  height: 10px;
+  background: #b5b5b5;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* vertical bar */
+.scrollbar-vertical {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 100%;
+}
+
+.scrollbar-thumb-vertical {
+  position: absolute;
+  width: 8px;
+  background: #b5b5b5;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* -----------------------------------
+   테이블
+----------------------------------- */
 .base-table {
-  table-layout: fixed;
-  width: max-content;
-  min-width: 100%;
+  width: max-content !important;
+  min-width: max-content !important;
   border-collapse: collapse;
 }
 
-/* sticky header: 세로만 고정, 가로는 같이 스크롤 */
-.base-table thead th {
+thead {
   position: sticky;
   top: 0;
-  z-index: 5;
   background: #fff;
+  z-index: 20;
 }
 
-/* 그룹 헤더 스타일 */
-.group-header {
-  background: #f8f8f8;
-  font-weight: 600;
-  border-bottom: 1px solid #ddd;
-}
-
-/* 정렬 */
-.align-left {
-  text-align: left;
-}
-.align-center {
-  text-align: center;
-}
-.align-right {
-  text-align: right;
-}
-
-/* 셀 공통 스타일 */
 .th,
 .td {
-  padding: 12px;
-  border-bottom: 1px solid #eee;
-  border-right: 1px solid #ddd;
+  padding: 10px;
+  border: 1px solid #eee;
   white-space: nowrap;
-  background: #fff;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  box-sizing: border-box;
-}
-
-/* no data */
-.no-data {
-  text-align: center;
-  padding: 20px;
 }
 </style>
