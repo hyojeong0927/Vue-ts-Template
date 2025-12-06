@@ -1,23 +1,21 @@
 <template>
-  <div class="table-wrapper">
+  <div class="table-wrapper" ref="wrapperRef">
+    <!-- 세로 가상 스크롤 + 가로 브라우저 스크롤 -->
     <div
       class="body-viewport"
       ref="viewportRef"
+      :style="{ maxHeight: maxHeight + 'px' }"
       @scroll="onScroll"
-      :style="{
-        maxHeight: maxHeight + 'px',
-        '--header-height': headerHeight + 'px',
-      }"
     >
       <table class="base-table">
-        <!-- COLGROUP -->
+        <!-- COLGROUP: flatColumns 기준 -->
         <colgroup>
           <col v-for="col in flatColumns" :key="col.key" :style="{ width: col.width || 'auto' }" />
         </colgroup>
 
-        <!-- HEADER -->
+        <!-- HEADER (rowspan/colspan + sticky) -->
         <thead>
-          <tr v-for="(row, rIndex) in headerRows" :key="rIndex">
+          <tr v-for="(row, rIndex) in headerRows" :key="'hr-' + rIndex">
             <th
               v-for="cell in row"
               :key="cell._id"
@@ -25,64 +23,50 @@
               :colspan="cell.colSpan"
               class="th sticky-th"
               :class="[
-                cell.isGroup ? 'group-header' : '',
+                cell.isGroup ? 'group-header' : 'leaf-header',
                 cell.groupKey ? `group-${cell.groupKey}` : '',
-                `depth-${cell.depth}`,
+                cell.depth !== undefined ? `depth-${cell.depth}` : '',
               ]"
-              :style="{ top: `calc(var(--header-height) * -1 + ${rIndex * headerRowHeight}px)` }"
+              :style="{
+                top: rIndex * headerRowHeight + 'px',
+                textAlign: cell.align || 'center',
+              }"
             >
               {{ cell.label }}
             </th>
           </tr>
         </thead>
 
-        <!-- BODY -->
+        <!-- BODY (세로 가상 스크롤) -->
         <tbody>
-          <tr class="spacer-row">
-            <td :style="{ height: offsetTop + 'px' }" :colspan="flatColumns.length" />
+          <!-- 위쪽 spacer -->
+          <tr v-if="topSpacerHeight > 0" class="spacer-row">
+            <td :colspan="flatColumns.length" :style="{ height: topSpacerHeight + 'px' }"></td>
           </tr>
 
+          <!-- 실제 보여줄 구간 -->
           <tr
-            v-for="(row, idx) in visibleRows"
-            :key="row[rowKey] ?? idx"
-            class="data-row"
-            :class="{ 'row-selected': isRowSelected(row) }"
+            v-for="(row, vIndex) in visibleRows"
+            :key="row.id ?? startIndex + vIndex"
+            class="body-row"
           >
             <td
               v-for="col in flatColumns"
               :key="col.key"
               class="td"
-              :class="[col.align ? `is-${col.align}` : '']"
+              :class="col.className || ''"
+              :style="{ textAlign: col.align || 'left' }"
             >
-              <!-- 체크박스 -->
-              <template v-if="useCheckbox && col.type === 'checkbox'">
-                <input type="checkbox" :checked="isChecked(row)" @change.stop="toggleCheck(row)" />
-              </template>
-
-              <!-- 라디오 -->
-              <template v-else-if="useRadio && col.type === 'radio'">
-                <input
-                  type="radio"
-                  :name="radioGroupName"
-                  :checked="isRadioSelected(row)"
-                  @change.stop="toggleRadio(row)"
-                />
-              </template>
-
-              <!-- 기본 데이터 -->
-              <template v-else>
-                <!-- <slot :name="col.key" :row="row" :value="row[col.key]">
-                  {{ row[col.key] }}
-                </slot> -->
-                <slot :name="col.key" :row="row">
-                  {{ getCellValue(row, col) }}
-                </slot>
-              </template>
+              <!-- 기본 렌더링 + 슬롯 기반 커스터마이징 -->
+              <slot :name="col.key" :row="row" :value="row[col.key]">
+                {{ row[col.key] }}
+              </slot>
             </td>
           </tr>
 
-          <tr class="spacer-row">
-            <td :style="{ height: bottomSpacer + 'px' }" :colspan="flatColumns.length" />
+          <!-- 아래쪽 spacer -->
+          <tr v-if="bottomSpacerHeight > 0" class="spacer-row">
+            <td :colspan="flatColumns.length" :style="{ height: bottomSpacerHeight + 'px' }"></td>
           </tr>
         </tbody>
       </table>
@@ -91,190 +75,195 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
-import { useVirtualScroll } from './useVirtualScroll'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 
 const props = defineProps({
-  columns: Array,
-  rows: Array,
-  rowKey: { type: String, default: 'id' },
-  selectionMode: { type: String, default: 'none' },
-  rowHeight: { type: Number, default: 40 },
-  overscan: { type: Number, default: 8 },
-  maxHeight: { type: Number, default: 440 },
-  headerRowHeight: { type: Number, default: 36 },
+  /** headerRows 예시: [[{ _id, label, rowSpan, colSpan, isGroup, depth, groupKey }], ...] */
+  headerRows: {
+    type: Array,
+    required: true,
+  },
+  /** flatColumns 예시: [{ key, label, width, align, className }, ...] */
+  flatColumns: {
+    type: Array,
+    required: true,
+  },
+  /** 실제 데이터 row 배열 */
+  rows: {
+    type: Array,
+    required: true,
+  },
+  /** 한 줄 높이(px) - 고정 row height 기준 */
+  rowHeight: {
+    type: Number,
+    default: 40,
+  },
+  /** header 한 줄 높이(px) */
+  headerRowHeight: {
+    type: Number,
+    default: 40,
+  },
+  /** 가상 스크롤 버퍼(위/아래 여유 row 수) */
+  buffer: {
+    type: Number,
+    default: 5,
+  },
+  /** 세로 최대 높이(px) - 외부에서 조정 가능 */
+  maxHeight: {
+    type: Number,
+    default: 400,
+  },
 })
 
-const emit = defineEmits(['update:selectedKeys', 'update:selectedRadio'])
+const wrapperRef = ref(null)
+const viewportRef = ref(null)
 
-/* ------------------------------------
-   FLAT COLUMNS
------------------------------------- */
-const flatColumns = computed(() => {
-  const out = []
-  const walk = cols => {
-    cols.forEach(col => {
-      if (col.children) walk(col.children)
-      else out.push(col)
-    })
+/* 현재 스크롤 기준 시작/끝 인덱스 */
+const startIndex = ref(0)
+const endIndex = ref(0)
+
+/* 화면에 실제로 필요한 row 수 */
+const visibleCount = ref(0)
+
+/* rows 길이 변화 감지해서 끝 인덱스 보정 */
+watch(
+  () => props.rows.length,
+  () => {
+    updateVisibleCount()
+    updateRangeByScroll()
   }
-  walk(props.columns)
-  return out
+)
+
+/* 화면에 보여줄 rows */
+const visibleRows = computed(() => {
+  return props.rows.slice(startIndex.value, endIndex.value)
 })
 
-const getLeaf = col => (!col.children ? 1 : col.children.reduce((sum, c) => sum + getLeaf(c), 0))
-
-const getMaxDepth = (cols, depth = 1) =>
-  cols.reduce(
-    (m, c) => (c.children ? Math.max(m, getMaxDepth(c.children, depth + 1)) : Math.max(m, depth)),
-    depth
-  )
-
-const maxDepth = computed(() => getMaxDepth(props.columns))
-
-/* ------------------------------------
-   HEADER ROWS
------------------------------------- */
-const headerRows = computed(() => {
-  const rows = []
-
-  const build = (cols, depth, parentKey = null) => {
-    rows[depth] = rows[depth] || []
-
-    cols.forEach(col => {
-      const isGroup = !!col.children
-
-      const cell = {
-        _id: `${col.key}_${depth}_${rows[depth].length}`,
-        label: col.label,
-        isGroup,
-        depth,
-        groupKey: parentKey,
-        colSpan: isGroup ? getLeaf(col) : 1,
-        rowSpan: isGroup ? 1 : maxDepth.value - depth,
-      }
-
-      rows[depth].push(cell)
-
-      if (isGroup) {
-        build(col.children, depth + 1, col.key)
-      }
-    })
-  }
-
-  build(props.columns, 0)
-  return rows
+/* spacer 높이 계산 */
+const topSpacerHeight = computed(() => startIndex.value * props.rowHeight)
+const bottomSpacerHeight = computed(() => {
+  const total = props.rows.length * props.rowHeight
+  const used = endIndex.value * props.rowHeight
+  const remain = total - used
+  return remain > 0 ? remain : 0
 })
 
-/* header 전체 높이 계산 */
-const headerHeight = computed(() => headerRows.value.length * props.headerRowHeight)
-
-/* ------------------------------------
-   VIRTUAL SCROLL
------------------------------------- */
-const rowCount = computed(() => props.rows.length)
-
-const { viewportRef, startIndex, endIndex, offsetTop, visibleHeight, totalHeight, onScroll } =
-  useVirtualScroll({
-    rowCount,
-    rowHeight: props.rowHeight,
-    overscan: props.overscan,
-  })
-
-const visibleRows = computed(() => props.rows.slice(startIndex.value, endIndex.value))
-const bottomSpacer = computed(() => totalHeight() - offsetTop.value - visibleHeight.value)
-
-/* ------------------------------------
-   SELECTION
------------------------------------- */
-const useCheckbox = computed(() => props.selectionMode === 'checkbox')
-const useRadio = computed(() => props.selectionMode === 'radio')
-
-const selectedSet = ref(new Set())
-const selectedRadio = ref(null)
-const radioGroupName = `vr-${Math.random().toString(36).slice(2)}`
-
-const toggleCheck = row => {
-  const key = row[props.rowKey]
-  selectedSet.value.has(key) ? selectedSet.value.delete(key) : selectedSet.value.add(key)
+/* 처음/창 크기 변경 시 화면에 보여줄 row 수 계산 */
+const updateVisibleCount = () => {
+  if (!viewportRef.value) return
+  const vh = viewportRef.value.clientHeight || props.maxHeight
+  visibleCount.value = Math.ceil(vh / props.rowHeight) + props.buffer * 2
 }
 
-const isChecked = row => selectedSet.value.has(row[props.rowKey])
+/* 스크롤 위치 기반으로 start/end 계산 */
+const updateRangeByScroll = () => {
+  if (!viewportRef.value) return
 
-watch(selectedSet, val => {
-  if (useCheckbox.value) emit('update:selectedKeys', [...val])
-})
+  const scrollTop = viewportRef.value.scrollTop
+  const first = Math.floor(scrollTop / props.rowHeight) - props.buffer
+  const safeStart = Math.max(0, first)
+  const safeEnd = Math.min(props.rows.length, safeStart + visibleCount.value)
 
-const toggleRadio = row => (selectedRadio.value = row[props.rowKey])
-const isRadioSelected = row => selectedRadio.value === row[props.rowKey]
-
-watch(selectedRadio, val => {
-  if (useRadio.value) emit('update:selectedRadio', val)
-})
-
-const isRowSelected = row => {
-  const key = row[props.rowKey]
-  if (useCheckbox.value) return selectedSet.value.has(key)
-  if (useRadio.value) return selectedRadio.value === key
-  return false
+  startIndex.value = safeStart
+  endIndex.value = safeEnd
 }
+
+/* 스크롤 이벤트 핸들러 */
+const onScroll = () => {
+  updateRangeByScroll()
+}
+
+/* 리사이즈 대응 */
+const handleResize = () => {
+  updateVisibleCount()
+  updateRangeByScroll()
+}
+
+onMounted(() => {
+  updateVisibleCount()
+  updateRangeByScroll()
+  window.addEventListener('resize', handleResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
+})
 </script>
 
 <style scoped>
 .table-wrapper {
-  width: 100%;
-  overflow: hidden;
-}
-
-/* ★ header 아래에서 스크롤 시작 */
-.body-viewport {
-  overflow-y: auto;
-  overflow-x: auto;
-  position: relative;
-  padding-top: var(--header-height);
-}
-
-/* sticky header 보정 */
-.sticky-th {
-  position: sticky;
-  top: calc(var(--header-height) * -1);
-  background: #fff;
-  z-index: 10;
-  /* top은 JS에서 계산한 headerHeight 기반 */
-}
-
-.base-table {
-  width: max-content;
-  border-collapse: collapse;
-}
-
-th,
-td {
   border: 1px solid #ddd;
-  padding: 8px 10px;
-  white-space: nowrap;
-  font-size: 13px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fff;
 }
 
-.group-header {
-  background: #f3f4f6;
+/* 세로 + 가로 스크롤 영역 */
+.body-viewport {
+  overflow: auto; /* 가로/세로 모두 브라우저 기본 스크롤 */
+  position: relative;
+}
+
+/* 테이블 기본 */
+.base-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.th,
+.td {
+  border: 1px solid #e0e0e0;
+  padding: 4px 8px;
+  font-size: 13px;
+  box-sizing: border-box;
+  background: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* HEADER */
+thead .th {
+  background: #f8f8f8;
   font-weight: 600;
 }
 
-.row-selected {
-  background: #e6f4ff;
+/* sticky header */
+.sticky-th {
+  position: sticky;
+  z-index: 3; /* body 위에 오도록 */
 }
 
-.is-center {
-  text-align: center;
+/* 그룹/leaf header 스타일 예시 */
+.group-header {
+  background: #f0f3ff;
 }
 
-.is-right {
-  text-align: right;
+.leaf-header {
+  background: #f8f8f8;
 }
 
+/* depth별 예시 */
+.depth-0 {
+  font-size: 14px;
+}
+.depth-1 {
+  font-size: 13px;
+}
+.depth-2 {
+  font-size: 12px;
+}
+
+/* body row hover */
+.body-row:hover .td {
+  background: #fafafa;
+}
+
+/* spacer row는 보이지 않게 */
 .spacer-row td {
   border: none;
   padding: 0;
+  background: transparent;
 }
 </style>

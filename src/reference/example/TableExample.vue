@@ -11,7 +11,7 @@
 </template>
 
 <script setup>
-import TableWrap from '../../components/table/TableWrap-X.vue'
+import TableWrap from '../../components/table/TableWrap-x.vue'
 
 const columns = [
   // { key: '_radio', label: '', type: 'radio', align: 'center', width: '40px' },
