@@ -3,7 +3,7 @@
     <!-- Scroll Area -->
     <div class="scroll-body" ref="scrollBody" @scroll="syncScroll">
       <table class="base-table">
-        <!-- 컬럼 폭 지정용 colgroup (width 지정 시 사용) -->
+        <!-- COLGROUP -->
         <colgroup>
           <col
             v-for="(col, i) in flatColumns"
@@ -100,13 +100,13 @@
     </div>
 
     <!-- Custom Horizontal Scrollbar -->
-    <div class="scrollbar-horizontal" @mousedown="startHorizontalDrag">
-      <div class="scrollbar-thumb-horizontal" ref="thumbX"></div>
+    <div class="scrollbar-horizontal">
+      <div class="scrollbar-thumb-horizontal" ref="thumbX" @mousedown="startHorizontalDrag"></div>
     </div>
 
     <!-- Custom Vertical Scrollbar -->
-    <div class="scrollbar-vertical" @mousedown="startVerticalDrag">
-      <div class="scrollbar-thumb-vertical" ref="thumbY"></div>
+    <div class="scrollbar-vertical">
+      <div class="scrollbar-thumb-vertical" ref="thumbY" @mousedown="startVerticalDrag"></div>
     </div>
   </div>
 </template>
@@ -117,15 +117,16 @@ import { ref, computed, onMounted } from 'vue'
 const emit = defineEmits(['update:radio', 'update:checkbox'])
 
 const props = defineProps({
-  columns: { type: Array, required: true },
-  rows: { type: Array, required: true },
-  checkbox: { type: Boolean, default: false },
-  radio: { type: Boolean, default: false },
+  columns: Array,
+  rows: Array,
+  checkbox: Boolean,
+  radio: Boolean,
 })
 
-/* ---------------------------
-      HEADER GROUP 계산
----------------------------- */
+/* ------------------------------
+   HEADER GROUP + FLAT COLUMNS
+------------------------------ */
+
 const countLeaf = c => (c.children?.length ? c.children.reduce((s, v) => s + countLeaf(v), 0) : 1)
 
 const getMaxDepth = cols => {
@@ -137,12 +138,12 @@ const headerRows = computed(() => {
   const rows = Array.from({ length: getMaxDepth(props.columns) }, () => [])
   let uid = 0
 
-  const walk = (cols, depth, parentGroupKey = null) => {
+  const walk = (cols, depth, parentKey = null) => {
     cols.forEach(col => {
       const isGroup = !!col.children
-      const groupKey = isGroup ? col.key : parentGroupKey
+      const groupKey = isGroup ? col.key : parentKey
 
-      const cell = {
+      rows[depth].push({
         ...col,
         _id: uid++,
         isGroup,
@@ -150,9 +151,7 @@ const headerRows = computed(() => {
         rowSpan: isGroup ? 1 : rows.length - depth,
         depth,
         groupKey,
-      }
-
-      rows[depth].push(cell)
+      })
 
       if (isGroup) walk(col.children, depth + 1, col.key)
     })
@@ -162,7 +161,6 @@ const headerRows = computed(() => {
   return rows
 })
 
-/* leaf columns */
 const flatColumns = computed(() => {
   const list = []
   const walk = cols => {
@@ -175,40 +173,25 @@ const flatColumns = computed(() => {
   return list
 })
 
-/* ---------------------------
-      CHECKBOX / RADIO
----------------------------- */
+/* ------------------------------
+   RADIO / CHECKBOX SELECT
+------------------------------ */
+
 const selectedRows = ref([])
 const selectedRadio = ref(null)
 
-/* 수정된 row 선택 함수 */
 const isRowSelected = idx => {
   if (props.checkbox && selectedRows.value.includes(idx)) return true
   if (props.radio && selectedRadio.value === idx) return true
   return false
 }
 
-/* row 클릭 -> 체크박스 전용 */
-const toggleRow = idx => {
-  // 라디오 모드에서는 row 클릭이 선택되지 않음
-  if (props.radio) return
-
-  // checkbox 모드만 row 클릭 허용
-  if (!props.checkbox) return
-
-  const i = selectedRows.value.indexOf(idx)
-  if (i >= 0) selectedRows.value.splice(i, 1)
-  else selectedRows.value.push(idx)
-
-  emitCheck()
-}
-
 const emitCheck = () => emit('update:checkbox', selectedRows.value)
 const emitRadio = () => emit('update:radio', selectedRadio.value)
 
-/* ---------------------------
-   커스텀 스크롤바 (세로/가로)
----------------------------- */
+/* ------------------------------
+   CUSTOM SCROLLBAR
+------------------------------ */
 
 const scrollBody = ref(null)
 const thumbX = ref(null)
@@ -219,13 +202,21 @@ const syncScroll = () => {
   updateHorizontalThumb()
 }
 
-/* ----- Y bar ----- */
+/* ------------------------------
+      VERTICAL BAR
+------------------------------ */
+
+let draggingY = false
+let startY = 0
+let startScrollTop = 0
+
 const updateVerticalThumb = () => {
+  if (!scrollBody.value || !thumbY.value) return
+
   const body = scrollBody.value
   const thumb = thumbY.value
-  if (!body || !thumb) return
-
   const maxScroll = body.scrollHeight - body.clientHeight
+
   if (maxScroll <= 0) {
     thumb.style.height = '0'
     thumb.style.top = '0'
@@ -239,40 +230,48 @@ const updateVerticalThumb = () => {
   thumb.style.top = `${scrollRatio * (body.clientHeight - thumb.offsetHeight)}px`
 }
 
-let draggingY = false
-let startY = 0
-let startScrollTop = 0
-
 const startVerticalDrag = e => {
-  if (!thumbY.value || !thumbY.value.contains(e.target)) return
   draggingY = true
   startY = e.clientY
   startScrollTop = scrollBody.value.scrollTop
-  document.addEventListener('mousemove', onVerticalDrag)
-  document.addEventListener('mouseup', stopVerticalDrag)
+
+  window.addEventListener('mousemove', onVerticalDrag)
+  window.addEventListener('mouseup', stopVerticalDrag)
 }
 
 const onVerticalDrag = e => {
   if (!draggingY) return
+
   const body = scrollBody.value
   const thumb = thumbY.value
+
   const maxThumb = body.clientHeight - thumb.offsetHeight
   const maxScroll = body.scrollHeight - body.clientHeight
-  if (maxThumb <= 0 || maxScroll <= 0) return
 
   const delta = e.clientY - startY
   const scrollDelta = (delta / maxThumb) * maxScroll
+
   body.scrollTop = startScrollTop + scrollDelta
 }
 
 const stopVerticalDrag = () => {
   draggingY = false
-  document.removeEventListener('mousemove', onVerticalDrag)
-  document.removeEventListener('mouseup', stopVerticalDrag)
+  window.removeEventListener('mousemove', onVerticalDrag)
+  window.removeEventListener('mouseup', stopVerticalDrag)
 }
 
-/* ----- X bar ----- */
+/* ------------------------------
+      HORIZONTAL BAR
+------------------------------ */
+
+let draggingX = false
+let startX = 0
+let startScrollLeft = 0
+
 const updateHorizontalThumb = () => {
+  // ⭐ 드래그 중일 때는 scroll 이벤트로 움직이지 않도록 막음
+  if (draggingX) return
+
   const body = scrollBody.value
   const thumb = thumbX.value
   if (!body || !thumb) return
@@ -291,39 +290,39 @@ const updateHorizontalThumb = () => {
   thumb.style.left = `${scrollRatio * (body.clientWidth - thumb.offsetWidth)}px`
 }
 
-let draggingX = false
-let startX = 0
-let startScrollLeft = 0
-
 const startHorizontalDrag = e => {
-  if (!thumbX.value || !thumbX.value.contains(e.target)) return
   draggingX = true
   startX = e.clientX
   startScrollLeft = scrollBody.value.scrollLeft
 
-  document.addEventListener('mousemove', onHorizontalDrag)
-  document.addEventListener('mouseup', stopHorizontalDrag)
+  window.addEventListener('mousemove', onHorizontalDrag)
+  window.addEventListener('mouseup', stopHorizontalDrag)
 }
 
 const onHorizontalDrag = e => {
   if (!draggingX) return
+
   const body = scrollBody.value
   const thumb = thumbX.value
+
   const maxThumb = body.clientWidth - thumb.offsetWidth
   const maxScroll = body.scrollWidth - body.clientWidth
-  if (maxThumb <= 0 || maxScroll <= 0) return
 
   const delta = e.clientX - startX
   const scrollDelta = (delta / maxThumb) * maxScroll
+
   body.scrollLeft = startScrollLeft + scrollDelta
 }
 
 const stopHorizontalDrag = () => {
   draggingX = false
-  document.removeEventListener('mousemove', onHorizontalDrag)
-  document.removeEventListener('mouseup', stopHorizontalDrag)
+  window.removeEventListener('mousemove', onHorizontalDrag)
+  window.removeEventListener('mouseup', stopHorizontalDrag)
 }
 
+/* ------------------------------
+      MOUNTED
+------------------------------ */
 onMounted(() => {
   syncScroll()
   requestAnimationFrame(syncScroll)
