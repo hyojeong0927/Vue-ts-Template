@@ -1,5 +1,5 @@
 <template>
-  <TableWrap :columns="columns" :rows="rows" checkbox :forceHorizontalScroll="true">
+  <TableWrap :columns="columns" :rows="rows" checkbox>
     <template #memoSlot="{ row }">
       <input v-model="row.memo" placeholder="메모 입력" />
     </template>

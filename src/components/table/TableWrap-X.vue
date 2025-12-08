@@ -8,9 +8,7 @@
           <col
             v-for="(col, i) in flatColumns"
             :key="'col-' + i"
-            :style="{
-              width: col.width || 'auto',
-            }"
+            :style="{ width: col.width || 'auto' }"
           />
         </colgroup>
 
@@ -41,7 +39,6 @@
             v-for="(row, rIndex) in rows"
             :key="rIndex"
             :class="{ 'row-selected': isRowSelected(rIndex) }"
-            @click="toggleRow(rIndex)"
           >
             <td
               v-for="col in flatColumns"
@@ -102,7 +99,7 @@
       </table>
     </div>
 
-    <!-- Custom Horizontal Scrollbar (scroll-body 밖) -->
+    <!-- Custom Horizontal Scrollbar -->
     <div class="scrollbar-horizontal" @mousedown="startHorizontalDrag">
       <div class="scrollbar-thumb-horizontal" ref="thumbX"></div>
     </div>
@@ -140,11 +137,6 @@ const headerRows = computed(() => {
   const rows = Array.from({ length: getMaxDepth(props.columns) }, () => [])
   let uid = 0
 
-  /**
-   * cols: 현재 레벨 컬럼 배열
-   * depth: 현재 헤더 행 인덱스(0 = 맨 위)
-   * parentGroupKey: 상위 그룹 key (leaf 에 내려줄 값)
-   */
   const walk = (cols, depth, parentGroupKey = null) => {
     cols.forEach(col => {
       const isGroup = !!col.children
@@ -156,24 +148,21 @@ const headerRows = computed(() => {
         isGroup,
         colSpan: isGroup ? countLeaf(col) : 1,
         rowSpan: isGroup ? 1 : rows.length - depth,
-        depth, // depth 클래스용
-        groupKey, // group-userInfo 같은 클래스용
+        depth,
+        groupKey,
       }
 
       rows[depth].push(cell)
 
-      if (isGroup) {
-        // 자식들은 이 그룹의 key 를 parentGroupKey 로 받는다
-        walk(col.children, depth + 1, col.key)
-      }
+      if (isGroup) walk(col.children, depth + 1, col.key)
     })
   }
 
-  walk(props.columns, 0, null)
+  walk(props.columns, 0)
   return rows
 })
 
-/* leaf columns (body / colgroup 에 사용) */
+/* leaf columns */
 const flatColumns = computed(() => {
   const list = []
   const walk = cols => {
@@ -192,13 +181,25 @@ const flatColumns = computed(() => {
 const selectedRows = ref([])
 const selectedRadio = ref(null)
 
-const isRowSelected = idx => selectedRows.value.includes(idx)
+/* 수정된 row 선택 함수 */
+const isRowSelected = idx => {
+  if (props.checkbox && selectedRows.value.includes(idx)) return true
+  if (props.radio && selectedRadio.value === idx) return true
+  return false
+}
 
+/* row 클릭 -> 체크박스 전용 */
 const toggleRow = idx => {
+  // 라디오 모드에서는 row 클릭이 선택되지 않음
+  if (props.radio) return
+
+  // checkbox 모드만 row 클릭 허용
   if (!props.checkbox) return
+
   const i = selectedRows.value.indexOf(idx)
   if (i >= 0) selectedRows.value.splice(i, 1)
   else selectedRows.value.push(idx)
+
   emitCheck()
 }
 
