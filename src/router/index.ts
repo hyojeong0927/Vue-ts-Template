@@ -21,6 +21,7 @@ import SelectboxExample from '@/reference/example/SelectboxExample.vue'
 import StepExample from '@/reference/example/StepExample.vue'
 import TabsExample from '@/reference/example/TabsExample.vue'
 import TableExample from '@/reference/example/TableExample.vue'
+import PopupExample from '@/reference/example/PopupExample.vue'
 
 const routes = [
   {
@@ -45,6 +46,7 @@ const routes = [
       { path: 'example/step', name: 'StepExample', component: StepExample },
       { path: 'example/tab', name: 'TabsExample', component: TabsExample },
       { path: 'example/table', name: 'Table', component: TableExample },
+      { path: 'example/popup', name: 'Popup', component: PopupExample },
     ],
   },
   {

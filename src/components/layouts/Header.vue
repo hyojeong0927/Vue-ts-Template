@@ -75,6 +75,7 @@ const menuData = [
       { label: 'Step', to: '/example/step' },
       { label: 'Tab', to: '/example/tab' },
       { label: 'Table', to: '/example/table' },
+      { label: 'Popup', to: '/example/popup' },
     ],
   },
   {
