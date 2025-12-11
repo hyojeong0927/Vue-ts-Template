@@ -3,7 +3,7 @@
     <!-- Scroll Area -->
     <div class="scroll-body" ref="scrollBody" @scroll="syncScroll">
       <table class="base-table">
-        <!-- 컬럼 폭 지정용 colgroup (width 지정 시 사용) -->
+        <!-- COLGROUP -->
         <colgroup>
           <col
             v-for="(col, i) in flatColumns"
@@ -39,7 +39,6 @@
             v-for="(row, rIndex) in rows"
             :key="rIndex"
             :class="{ 'row-selected': isRowSelected(rIndex) }"
-            @click="toggleRow(rIndex)"
           >
             <td
               v-for="col in flatColumns"
@@ -52,20 +51,21 @@
                 <input
                   type="radio"
                   name="table-radio"
-                  :value="rIndex"
-                  v-model="selectedRadio"
-                  @change="emitRadio"
+                  :checked="selectedRadio === rIndex"
+                  @change="onRadioChange(rIndex)"
+                  :disabled="props.radioDisabled || (col.disabled && col.disabled(row))"
                   @click.stop
                 />
               </template>
 
               <!-- CHECKBOX -->
-              <template v-else-if="col.type === 'checkbox' && checkbox">
+              <template v-else-if="col.type === 'checkbox' && props.checkbox">
                 <input
                   type="checkbox"
-                  :value="rIndex"
-                  v-model="selectedRows"
-                  @change="emitCheck"
+                  class="checkbox"
+                  :checked="selectedRows.includes(rIndex)"
+                  @change="onCheckboxChange($event, rIndex)"
+                  :disabled="props.checkboxDisabled || (col.disabled && col.disabled(row))"
                   @click.stop
                 />
               </template>
@@ -92,7 +92,6 @@
             </td>
           </tr>
 
-          <!-- no data -->
           <tr v-if="rows.length === 0">
             <td :colspan="flatColumns.length" class="no-data">데이터가 없습니다.</td>
           </tr>
@@ -101,28 +100,49 @@
     </div>
 
     <!-- Custom Horizontal Scrollbar -->
-    <div class="scrollbar-horizontal" @mousedown="startHorizontalDrag">
-      <div class="scrollbar-thumb-horizontal" ref="thumbX"></div>
+    <div class="scrollbar-horizontal">
+      <!-- ★ thumb에 직접 mousedown -->
+      <div class="scrollbar-thumb-horizontal" ref="thumbX" @mousedown="startHorizontalDrag"></div>
     </div>
 
     <!-- Custom Vertical Scrollbar -->
-    <div class="scrollbar-vertical" @mousedown="startVerticalDrag">
-      <div class="scrollbar-thumb-vertical" ref="thumbY"></div>
+    <div class="scrollbar-vertical">
+      <!-- ★ thumb에 직접 mousedown -->
+      <div class="scrollbar-thumb-vertical" ref="thumbY" @mousedown="startVerticalDrag"></div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 
-const emit = defineEmits(['update:radio', 'update:checkbox'])
-
+/* ---------------------------
+      PROPS & EMITS
+---------------------------- */
 const props = defineProps({
   columns: { type: Array, required: true },
   rows: { type: Array, required: true },
+
   checkbox: { type: Boolean, default: false },
   radio: { type: Boolean, default: false },
+
+  // v-model:checkbox
+  modelValueCheckbox: {
+    type: Array,
+    default: () => [],
+  },
+
+  // v-model:radio
+  modelValueRadio: {
+    type: Number,
+    default: null,
+  },
+
+  checkboxDisabled: { type: Boolean, default: false },
+  radioDisabled: { type: Boolean, default: false },
 })
+
+const emit = defineEmits(['update:radio', 'update:checkbox', 'scroll-bottom'])
 
 /* ---------------------------
       HEADER GROUP 계산
@@ -135,6 +155,7 @@ const getMaxDepth = cols => {
 }
 
 const headerRows = computed(() => {
+  if (!props.columns.length) return []
   const rows = Array.from({ length: getMaxDepth(props.columns) }, () => [])
   let uid = 0
 
@@ -168,7 +189,7 @@ const flatColumns = computed(() => {
   const list = []
   const walk = cols => {
     cols.forEach(col => {
-      if (col.children) walk(col.children)
+      if (col.children?.length) walk(col.children)
       else list.push(col)
     })
   }
@@ -179,48 +200,78 @@ const flatColumns = computed(() => {
 /* ---------------------------
       CHECKBOX / RADIO
 ---------------------------- */
-const selectedRows = ref([])
-const selectedRadio = ref(null)
+const selectedRows = ref([...props.modelValueCheckbox])
+const selectedRadio = ref(props.modelValueRadio)
 
-/* 수정된 row 선택 함수 */
-const isRowSelected = idx => {
-  if (props.checkbox && selectedRows.value.includes(idx)) return true
-  if (props.radio && selectedRadio.value === idx) return true
-  return false
+/* 부모 reset → 자식 state 동기화 */
+watch(
+  () => props.modelValueCheckbox,
+  v => (selectedRows.value = [...v])
+)
+watch(
+  () => props.modelValueRadio,
+  v => (selectedRadio.value = v)
+)
+
+/* 체크박스 핸들러 */
+const onCheckboxChange = (e, idx) => {
+  let newList = [...selectedRows.value]
+  if (e.target.checked) {
+    if (!newList.includes(idx)) newList.push(idx)
+  } else {
+    newList = newList.filter(v => v !== idx)
+  }
+  selectedRows.value = newList
+  emit('update:checkbox', newList)
 }
 
-/* row 클릭 -> 체크박스 전용 */
-const toggleRow = idx => {
-  // 라디오 모드에서는 row 클릭이 선택되지 않음
-  if (props.radio) return
-
-  // checkbox 모드만 row 클릭 허용
-  if (!props.checkbox) return
-
-  const i = selectedRows.value.indexOf(idx)
-  if (i >= 0) selectedRows.value.splice(i, 1)
-  else selectedRows.value.push(idx)
-
-  emitCheck()
+/* 라디오 핸들러 */
+const onRadioChange = idx => {
+  selectedRadio.value = idx
+  emit('update:radio', idx)
 }
 
-const emitCheck = () => emit('update:checkbox', selectedRows.value)
-const emitRadio = () => emit('update:radio', selectedRadio.value)
+/* row-selected (props 기반) */
+const isRowSelected = idx => selectedRows.value.includes(idx) || selectedRadio.value === idx
+
+watch(
+  () => props.modelValueCheckbox,
+  v => {
+    selectedRows.value = [...v]
+  }
+)
 
 /* ---------------------------
-   커스텀 스크롤바 (세로/가로)
+   Scroll & Custom Scrollbar
 ---------------------------- */
-
 const scrollBody = ref(null)
 const thumbX = ref(null)
 const thumbY = ref(null)
 
+const bottomLock = ref(false)
+
+const checkScrollBottom = () => {
+  const body = scrollBody.value
+  if (!body) return false
+  return body.scrollTop + body.clientHeight >= body.scrollHeight - 5
+}
+
+/* 메인 스크롤 핸들러: thumb 업데이트 + 바닥 감지 */
 const syncScroll = () => {
   updateVerticalThumb()
   updateHorizontalThumb()
+
+  if (!bottomLock.value && checkScrollBottom()) {
+    bottomLock.value = true
+    emit('scroll-bottom')
+
+    setTimeout(() => {
+      bottomLock.value = false
+    }, 200)
+  }
 }
 
-/* ----- Y bar ----- */
+/* ----- Vertical Bar ----- */
 const updateVerticalThumb = () => {
   const body = scrollBody.value
   const thumb = thumbY.value
@@ -228,8 +279,9 @@ const updateVerticalThumb = () => {
 
   const maxScroll = body.scrollHeight - body.clientHeight
   if (maxScroll <= 0) {
-    thumb.style.height = '0'
-    thumb.style.top = '0'
+    // 스크롤 필요 없으면 숨김
+    thumb.style.height = '0px'
+    thumb.style.top = '0px'
     return
   }
 
@@ -237,42 +289,62 @@ const updateVerticalThumb = () => {
   thumb.style.height = `${ratio * 100}%`
 
   const scrollRatio = body.scrollTop / maxScroll
-  thumb.style.top = `${scrollRatio * (body.clientHeight - thumb.offsetHeight)}px`
+  const trackHeight = thumb.parentElement.clientHeight
+  const maxThumbTop = trackHeight - thumb.offsetHeight
+  thumb.style.top = `${scrollRatio * maxThumbTop}px`
 }
 
-let draggingY = false
-let startY = 0
-let startScrollTop = 0
+/* Vertical drag 상태 값 */
+const isDraggingY = ref(false)
+const dragStartY = ref(0)
+const scrollStartTop = ref(0)
 
+/* 드래그 시작 (세로) */
 const startVerticalDrag = e => {
-  if (!thumbY.value || !thumbY.value.contains(e.target)) return
-  draggingY = true
-  startY = e.clientY
-  startScrollTop = scrollBody.value.scrollTop
-  document.addEventListener('mousemove', onVerticalDrag)
-  document.addEventListener('mouseup', stopVerticalDrag)
-}
-
-const onVerticalDrag = e => {
-  if (!draggingY) return
   const body = scrollBody.value
   const thumb = thumbY.value
-  const maxThumb = body.clientHeight - thumb.offsetHeight
-  const maxScroll = body.scrollHeight - body.clientHeight
-  if (maxThumb <= 0 || maxScroll <= 0) return
+  if (!body || !thumb) return
 
-  const delta = e.clientY - startY
-  const scrollDelta = (delta / maxThumb) * maxScroll
-  body.scrollTop = startScrollTop + scrollDelta
+  isDraggingY.value = true
+  dragStartY.value = e.clientY
+  scrollStartTop.value = body.scrollTop
+
+  document.addEventListener('mousemove', onVerticalDrag)
+  document.addEventListener('mouseup', stopVerticalDrag)
+  e.preventDefault()
 }
 
+/* 드래그 중 (세로) */
+const onVerticalDrag = e => {
+  if (!isDraggingY.value) return
+  const body = scrollBody.value
+  const thumb = thumbY.value
+  if (!body || !thumb) return
+
+  const maxScroll = body.scrollHeight - body.clientHeight
+  const track = thumb.parentElement
+  const trackHeight = track.clientHeight
+  const thumbHeight = thumb.offsetHeight
+  const maxThumbTop = trackHeight - thumbHeight
+
+  if (maxScroll <= 0 || maxThumbTop <= 0) return
+
+  const deltaY = e.clientY - dragStartY.value
+  const scrollRatio = maxScroll / maxThumbTop
+
+  body.scrollTop = scrollStartTop.value + deltaY * scrollRatio
+  updateVerticalThumb()
+}
+
+/* 드래그 끝 (세로) */
 const stopVerticalDrag = () => {
-  draggingY = false
+  if (!isDraggingY.value) return
+  isDraggingY.value = false
   document.removeEventListener('mousemove', onVerticalDrag)
   document.removeEventListener('mouseup', stopVerticalDrag)
 }
 
-/* ----- X bar ----- */
+/* ----- Horizontal Bar ----- */
 const updateHorizontalThumb = () => {
   const body = scrollBody.value
   const thumb = thumbX.value
@@ -280,8 +352,8 @@ const updateHorizontalThumb = () => {
 
   const maxScroll = body.scrollWidth - body.clientWidth
   if (maxScroll <= 0) {
-    thumb.style.width = '0'
-    thumb.style.left = '0'
+    thumb.style.width = '0px'
+    thumb.style.left = '0px'
     return
   }
 
@@ -289,46 +361,84 @@ const updateHorizontalThumb = () => {
   thumb.style.width = `${ratio * 100}%`
 
   const scrollRatio = body.scrollLeft / maxScroll
-  thumb.style.left = `${scrollRatio * (body.clientWidth - thumb.offsetWidth)}px`
+  const trackWidth = thumb.parentElement.clientWidth
+  const maxThumbLeft = trackWidth - thumb.offsetWidth
+  thumb.style.left = `${scrollRatio * maxThumbLeft}px`
 }
 
-let draggingX = false
-let startX = 0
-let startScrollLeft = 0
+/* Horizontal drag 상태 값 */
+const isDraggingX = ref(false)
+const dragStartX = ref(0)
+const scrollStartLeft = ref(0)
 
+/* 드래그 시작 (가로) */
 const startHorizontalDrag = e => {
-  if (!thumbX.value || !thumbX.value.contains(e.target)) return
-  draggingX = true
-  startX = e.clientX
-  startScrollLeft = scrollBody.value.scrollLeft
+  const body = scrollBody.value
+  const thumb = thumbX.value
+  if (!body || !thumb) return
+
+  isDraggingX.value = true
+  dragStartX.value = e.clientX
+  scrollStartLeft.value = body.scrollLeft
 
   document.addEventListener('mousemove', onHorizontalDrag)
   document.addEventListener('mouseup', stopHorizontalDrag)
+  e.preventDefault()
 }
 
+/* 드래그 중 (가로) */
 const onHorizontalDrag = e => {
-  if (!draggingX) return
+  if (!isDraggingX.value) return
   const body = scrollBody.value
   const thumb = thumbX.value
-  const maxThumb = body.clientWidth - thumb.offsetWidth
-  const maxScroll = body.scrollWidth - body.clientWidth
-  if (maxThumb <= 0 || maxScroll <= 0) return
+  if (!body || !thumb) return
 
-  const delta = e.clientX - startX
-  const scrollDelta = (delta / maxThumb) * maxScroll
-  body.scrollLeft = startScrollLeft + scrollDelta
+  const maxScroll = body.scrollWidth - body.clientWidth
+  const track = thumb.parentElement
+  const trackWidth = track.clientWidth
+  const maxThumbLeft = trackWidth - thumb.offsetWidth
+
+  if (maxScroll <= 0 || maxThumbLeft <= 0) return
+
+  const deltaX = e.clientX - dragStartX.value
+  const scrollRatio = maxScroll / maxThumbLeft
+
+  body.scrollLeft = scrollStartLeft.value + deltaX * scrollRatio
+  updateHorizontalThumb()
 }
 
+/* 드래그 끝 (가로) */
 const stopHorizontalDrag = () => {
-  draggingX = false
+  if (!isDraggingX.value) return
+  isDraggingX.value = false
   document.removeEventListener('mousemove', onHorizontalDrag)
   document.removeEventListener('mouseup', stopHorizontalDrag)
 }
 
+/* ---------------------------
+   Lifecycle
+---------------------------- */
 onMounted(() => {
-  syncScroll()
+  // 처음 렌더 이후 스크롤바 계산
   requestAnimationFrame(syncScroll)
 })
+
+onBeforeUnmount(() => {
+  // 혹시 남아 있을 이벤트 클린업
+  document.removeEventListener('mousemove', onVerticalDrag)
+  document.removeEventListener('mouseup', stopVerticalDrag)
+  document.removeEventListener('mousemove', onHorizontalDrag)
+  document.removeEventListener('mouseup', stopHorizontalDrag)
+})
+
+/* rows / columns 바뀔 때 스크롤 재계산 */
+watch(
+  () => [props.rows, props.columns],
+  () => {
+    requestAnimationFrame(syncScroll)
+  },
+  { deep: true }
+)
 </script>
 
 <style scoped>
@@ -341,7 +451,6 @@ onMounted(() => {
 .scroll-body {
   max-height: 300px;
   overflow: auto;
-  overflow-x: auto !important;
 
   scrollbar-width: none;
   -ms-overflow-style: none;

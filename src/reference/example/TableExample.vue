@@ -1,5 +1,16 @@
 <template>
-  <TableWrap :columns="columns" :rows="rows" checkbox>
+  <button type="reset" @click="resetAll">초기화</button>
+  <TableWrap
+    :columns="columns"
+    :rows="rows"
+    radio
+    checkbox
+    :modelValueCheckbox="selectedRows"
+    :modelValueRadio="selectedRadio"
+    @update:checkbox="onCheckboxUpdate"
+    @update:radio="onRadioUpdate"
+    @scroll-bottom="loadMore"
+  >
     <template #memoSlot="{ row }">
       <input v-model="row.memo" placeholder="메모 입력" />
     </template>
@@ -8,11 +19,37 @@
       <button @click="alert(row.name)">보기</button>
     </template>
   </TableWrap>
+  <Paging v-model="page" :total="125" :limit="10" :pageSize="10" @change="onPageChange" />
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import TableWrap from '../../components/table/TableWrap-x.vue'
+import Paging from '../../components/table/Paging.vue'
+const page = ref(1)
 
+const selectedRows = ref([])
+const onPageChange = p => {
+  console.log('페이지 이동:', p)
+}
+const onCheckboxUpdate = list => {
+  selectedRows.value = list
+  console.log('✔ 체크된 행 리스트:', list)
+}
+const selectedRadio = ref(null)
+
+const onRadioUpdate = index => {
+  selectedRadio.value = index
+  console.log('🔘 라디오 선택된 행 index:', index)
+  console.log('🔘 선택된 row 데이터:', rows[index])
+}
+const loadMore = () => {
+  console.log('More data load...')
+}
+const resetAll = () => {
+  selectedRows.value = []
+  selectedRadio.value = null
+}
 const columns = [
   // { key: '_radio', label: '', type: 'radio', align: 'center', width: '40px' },
   {
